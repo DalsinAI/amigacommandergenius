@@ -1,0 +1,121 @@
+/*
+ * CMessageBox.cpp
+ *
+ *  Created on: 04.12.2009
+ *      Author: gerstrong
+ */
+
+#include "CMessageBox.h"
+#include <base/video/CVideoDriver.h>
+#include <base/CInput.h>
+//#include "graphics/GsGraphics.h"
+#include <base/interface/StringUtils.h>
+
+// This is a local functor that is invoked when the dialog has be closed
+struct CloseDialog : public InvokeFunctorEvent
+{
+    CloseDialog(bool &mustClose) : mMustClose(mustClose) {}
+
+    void operator()() const
+    {		mMustClose = true;	}
+
+    bool &mMustClose;
+};
+
+GsRect<float> transformInversed(const GsRect<float> &r1, const GsRect<float> &r2)
+{
+    GsRect<float> res = r1;
+
+    res.dim.x = r1.dim.x / r2.dim.x;
+    res.dim.y = r1.dim.y / r2.dim.y;
+
+    res.pos.x = (r1.pos.x-r2.pos.x) / r2.dim.x;
+    res.pos.y = (r1.pos.y-r2.pos.y) / r2.dim.y;
+
+    return res;
+}
+
+CMessageBox::CMessageBox(const std::string& text,
+                         const bool lower,
+                         const bool keymsg,
+                         const bool vorticonBorders,
+                         const FXKind fx) :
+CGUIDialog(GsRect<float>(0.1f, 0.1f, 0.8f, 0.8f), fx),
+m_mustclose(false)
+{
+    GsRect<float> closeButtonRect(0.0f, 0.0f, (0.06f)/0.8f, (0.06f)/0.8f);
+
+    GsRect<float> facRect( gVideoDriver.getGameResFactors() );
+    closeButtonRect.transformInverse(facRect);
+
+
+    mpTextCtrl =
+            add( new GsText( text, GsRect<float>(0.05f, 0.0f, 0.90f, 1.0f) ) );
+
+    // Those formulas work well with our constellation but I don't think they are perfect.
+    // They transform the Message Box the way the text fits perfectly in.
+    const auto gameRect = gVideoDriver.getGameResolution();
+    const float screenW = gameRect.dim.x;
+    const float screenH = gameRect.dim.y;
+
+    auto rect = getRect();
+
+    // Put text into relative dimensions
+
+    rect.dim.x = static_cast<float>( (mpTextCtrl->mTextDim.dim.x+4)*8 )/screenW;
+
+    if( rect.dim.x > 1.0f)
+    {
+        rect.dim.x = 1.0f;
+    }
+
+    rect.pos.x = (1.0f - rect.dim.x)*0.5f;
+
+    rect.dim.y = static_cast<float>( (mpTextCtrl->mTextDim.dim.y+2)*8 )/screenH;
+    rect.pos.y = (1.0f - rect.dim.y)*0.5f;
+
+    if(lower) // if lower is enabled, try to snap the Dlg to the bottom off the screen.
+    {
+        rect.pos.y = 1.0f - rect.dim.y;
+    }
+
+    setRect(rect);
+
+    // Shrink the effective Text area so it fits into the frame
+    auto textRect = GsRect<float>(0.0f, 0.0f, 1.0f, 1.0f);
+
+    auto textRectOnDlg = rect.transformed(textRect);
+    auto gameRectF = gameRect.asFloat();
+    GsRect<float> textRectOnScreen = gameRectF.transformed(textRectOnDlg);
+
+    textRectOnScreen.dim.y = textRectOnScreen.dim.y - 8;
+    textRectOnScreen.pos.y = textRectOnScreen.pos.y + 8;
+
+    const auto backGameRectF = transformInversed(textRectOnScreen, gameRectF);
+    const auto backTextRectOnDlg = transformInversed(backGameRectF, rect);
+
+    mpTextCtrl->setRect(backTextRectOnDlg);
+
+    initEmptyBackground();
+}
+
+void CMessageBox::processLogic()
+{
+    if( gInput.getPressedCommand(IC_STATUS) || gInput.mouseClicked() )
+    {
+        m_mustclose = true;
+    }
+
+    CGUIDialog::processLogic();
+    render();
+}
+
+void CMessageBox::render()
+{
+    CGUIDialog::processRendering();
+}
+
+bool CMessageBox::isFinished()
+{
+    return m_mustclose;
+}

@@ -1,0 +1,377 @@
+/*
+ * GsGraphics.cpp
+ *
+ *  Created on: 26.08.2009
+ *      Author: gerstrong
+ */
+
+#include "GsGraphics.h"
+#include <base/GsLogging.h>
+#include <base/interface/StringUtils.h>
+#include <base/CInput.h>
+#include <base/GsArguments.h>
+
+#include <base/video/GsEffectController.h>
+
+#include "GsFontLegacy.h"
+#include "GsTilemap.h"
+#include "GsSprite.h"
+#include "GsBitmap.h"
+#include "GsPalette.h"
+#include "GsCursor.h"
+
+#include <algorithm>
+
+
+bool exportArgEnabled()
+{
+    std::string exportGfxStr = gArgs.getValue("exportGfx");
+    std::transform(exportGfxStr.begin(), exportGfxStr.end(), exportGfxStr.begin(), ::tolower);
+    return (exportGfxStr == "on");
+}
+
+
+///
+// Creation Routines
+///
+void GsGraphics::createEmptyTilemaps(const size_t num)
+{
+	freeTilemap();
+    Tilemap.resize(num);
+}
+
+void GsGraphics::createEmptySprites(const size_t numVar,
+                                    const size_t numSprites)
+{
+	freeSprites();
+    GsSprite sprite;
+
+    std::vector<GsSprite> spriteVec;
+
+    spriteVec.assign(numSprites, sprite);
+
+    mSprite.assign(numVar, spriteVec);
+}
+
+void GsGraphics::appendSpriteVec(const std::vector<GsSprite> &spriteVec)
+{
+    mSprite.push_back(spriteVec);
+}
+
+void GsGraphics::appendBitmapVec(const std::vector<GsBitmap> &bmpVec)
+{
+    mBitmap.push_back(bmpVec);
+}
+
+void GsGraphics::dumpSprites()
+{
+    for(size_t i = 0; i < mSprite[0].size(); i++)
+	{
+        GsSprite &thisSprite = mSprite[0][i];
+
+        //const auto thisSfc = thisSprite.Surface().getSDLSurface();
+        auto &thisSfc = thisSprite.Surface();
+
+		// Temporary for testing!!
+		std::string fname = "sprite";
+		fname += itoa(i);
+		fname += ".bmp";                
+        SDL_SaveBMP(thisSfc.getSDLSurface(), fname.c_str());
+	}
+}
+
+
+void GsGraphics::optimizeSprites()
+{    
+    for(auto &spriteVec : mSprite)
+    {
+        for(auto &sprite : spriteVec)
+        {            
+            sprite.optimizeSurface();
+        }
+    }    
+}
+
+void GsGraphics::createEmptyBitmaps(const size_t numVar,
+                                    Uint16 num_bmps)
+{
+    for(auto &bitmap : mBitmap)
+    {
+        freeBitmaps(bitmap);
+    }
+
+    mBitmap.clear();
+
+    for(size_t i=0 ; i<numVar ; i++)
+    {
+        std::vector<GsBitmap> bitmapVec;
+
+        GsBitmap bitmap;
+        bitmapVec.assign(num_bmps, bitmap);
+
+        mBitmap.push_back( bitmapVec );
+    }
+}
+
+void GsGraphics::createEmptyMaskedBitmaps(Uint16 num_bmps)
+{
+	freeBitmaps(maskedBitmap);
+    GsBitmap bitmap;
+	maskedBitmap.assign(num_bmps, bitmap);
+}
+
+void GsGraphics::createEmptyMisGsBitmaps(Uint16 num_bmps)
+{
+    freeBitmaps(miscGsBitmap);
+    GsBitmap bitmap;
+    miscGsBitmap.assign(num_bmps, bitmap);
+}
+
+
+
+void GsGraphics::createEmptyFontmaps(Uint8 num_fonts)
+{
+	freeFonts();
+    mFontLegacyVec.assign(num_fonts, GsFontLegacy());
+}
+
+/**
+ * Draws some digits using galaxy style
+ */
+void GsGraphics::drawDigits(const std::string& text, Uint16 x, Uint16 y, SDL_Surface *blitsurface)
+{
+    GsTilemap &Tilemap = getTileMap(2);
+
+	for(Uint16 i=0 ; i<text.size() ; i++)
+	{
+		const char c = text[i];
+		Tilemap.drawTile(blitsurface, x+i*8, y, (c != ' ') ? 43+c-'1' : 41);
+	}
+}
+
+/**
+ * Draw one digits using galaxy style
+ */
+void GsGraphics::drawDigit(const char c, const Uint16 x, const Uint16 y, SDL_Surface *blitsurface)
+{
+    GsTilemap &Tilemap = getTileMap(2);
+	Tilemap.drawTile(blitsurface, x, y, c);
+}
+
+
+///
+// Destructors
+///
+/*void GsGraphics::freeCursor()
+{
+	mpCursor.release();
+}*/
+void GsGraphics::freeTilemap()
+{
+    if( !Tilemap.empty() )
+        Tilemap.clear();
+}
+void GsGraphics::freeFonts()
+{
+  while ( !mFontLegacyVec.empty() )
+    mFontLegacyVec.pop_back();
+}
+
+void GsGraphics::freeBitmaps(std::vector<GsBitmap> &bitmapVec)
+{    
+    while ( !bitmapVec.empty() )
+    {
+        bitmapVec.pop_back();
+    }
+}
+
+void GsGraphics::freeSprites()
+{
+    if( !mSprite.empty() )
+        mSprite.clear();
+}
+
+void GsGraphics::copyTileToSprite( const int var, Uint16 t, Uint16 s, Uint16 ntilestocopy )
+{
+	SDL_Rect src_rect, dst_rect;
+
+    auto tileMapPtr = Tilemap.at(1).getSDLSurface();
+	
+    src_rect.w = src_rect.h = 16;
+    dst_rect.w = dst_rect.h = 16;
+
+    mSprite[var][s].setSize( 16, 16*ntilestocopy );
+    mSprite[var][s].createSurface( tileMapPtr->flags, Palette.m_Palette );
+	
+	for(Uint8 i=0 ; i<ntilestocopy ; i++)
+	{
+		src_rect.x = 16*((t+i)%13);
+		src_rect.y = 16*((t+i)/13);
+		
+		dst_rect.x = 0;
+		dst_rect.y = 16*i;
+
+        //auto spriteSfc = mSprite[var][s].Surface().getSDLSurface();
+        //BlitSurface( tileMapPtr, &src_rect, spriteSfc.get(), &dst_rect);
+
+        auto &spriteSfc = mSprite[var][s].Surface();
+        BlitSurface( tileMapPtr, &src_rect, spriteSfc.getSDLSurface(), &dst_rect);
+	}
+}
+
+// draw an empty dialog box, for youseeinyourmind(), etc.
+// Maybe this should go to GsFont, because it's drawn by fonts...
+void GsGraphics::drawDialogBox(SDL_Surface *DialogSurface,
+                               int x1, int y1,
+                               int w, int h,
+                               Uint32 colour)
+{
+	int x,y,i,j;
+	SDL_Rect rect;
+    rect.x = x1*8; rect.w = (w+1)*8;
+	rect.y = y1*8; rect.h = (h+1)*8;
+	
+	SDL_FillRect(DialogSurface, &rect, colour);
+
+    mFontLegacyVec[0].drawCharacter(DialogSurface, 1, x1*8, y1*8);
+    mFontLegacyVec[0].drawCharacter(DialogSurface, 3, (x1+w)*8, y1*8);
+	for(x=(x1*8)+8,i=0;i<w-1;i++)
+	{
+        mFontLegacyVec[0].drawCharacter(DialogSurface, 2, x, y1*8);
+		x+=8;
+	}
+	y=(y1+1)*8;
+	for(j=0;j<h-2;j++)
+	{
+		for(x=(x1*8),i=0;i<=w;i++)
+		{
+            if (i==0) mFontLegacyVec[0].drawCharacter(DialogSurface, 4, x, y);
+            else if (i==w) mFontLegacyVec[0].drawCharacter(DialogSurface, 5, x, y);
+			x+=8;
+		}
+		y+=8;
+	}
+    for(x=(x1*8),i=0;i<=w;i++)
+    {
+        if (i==0) mFontLegacyVec[0].drawCharacter(DialogSurface, 6, x, y);
+        else if (i==w) mFontLegacyVec[0].drawCharacter(DialogSurface, 8, x, y);
+        else mFontLegacyVec[0].drawCharacter(DialogSurface, 7, x, y);
+		x+=8;
+    }
+}
+
+///
+// Getters
+///
+
+int GsGraphics::getNumSprites(const int var)
+{   return mSprite[var].size(); }
+
+GsTilemap &GsGraphics::getTileMap(size_t tilemap)
+{   return Tilemap.at(tilemap); }
+
+std::vector<GsTilemap> &GsGraphics::getTileMaps()
+{   return Tilemap; }
+
+void GsGraphics::setBitmapNameForIdx(const std::string name,
+                                     const int idx)
+{
+    mBitmapNameToIdx[name] = idx;
+}
+
+GsBitmap &GsGraphics::getBitmapFromId(const int var,
+                                      const int slot)
+//{   return mBitmap[var][slot];    }
+{   return mBitmap[0][slot];   }
+
+GsBitmap &GsGraphics::getMaskedBitmap(Uint16 slot)
+{   return maskedBitmap[slot];   }
+
+GsBitmap &GsGraphics::getMiscGsBitmap(Uint16 slot)
+{   return miscGsBitmap[slot];   }
+
+
+GsSprite &GsGraphics::getSprite(const int var, const int slot)
+{   return mSprite[var][slot];  }
+
+std::vector<GsSprite> &GsGraphics::getSpriteVec(const int var)
+{   return mSprite[var];    }
+
+GsSprite &GsGraphics::getSpecialSpriteRef(const std::string &name)
+{   return mSpecialSpriteMap[name];    }
+
+GsFontLegacy &GsGraphics::getFontLegacy(const int index)
+{    return mFontLegacyVec.at(index); }
+
+bool GsGraphics::isLegacyFontEmpty()
+{
+    return mFontLegacyVec.empty();
+}
+
+int GsGraphics::getNumLegacyFonts()
+{
+    return mFontLegacyVec.size();
+}
+
+
+GsBitmap *GsGraphics::getBitmapFromStr(const size_t sprVar,
+                                       const std::string &name) const
+{
+    int bmpVecIdx = int(sprVar);
+    const int bmpSize = int(mBitmap.size());
+
+    if(!mBitmap.empty())
+    {
+        auto it = mBitmapNameToIdx.find(name);
+
+        if(it != mBitmapNameToIdx.end())
+        {
+            const int idx = it->second;
+
+            // In case a bitmap for the sprite cannot be found, use a different one
+            while( bmpVecIdx >= bmpSize ) bmpVecIdx--;
+
+            auto &bitmap = mBitmap[size_t(bmpVecIdx)][size_t(idx)];
+
+            return const_cast<GsBitmap*>(&bitmap);
+        }
+    }
+
+	std::string error = "Ooops! Wrong TextID ";
+	error += "name";
+	error += "used!";
+	gLogging.textOut(error);
+
+    return nullptr;
+}
+
+GsSprite *GsGraphics::getSprite(const int var, const std::string &name) const
+{
+	std::string s_name;
+    for(unsigned int i=0 ; i<mSprite[var].size() ; i++)
+	{
+        s_name = mSprite[var][i].getName();
+
+		if(s_name == name)
+        {
+            return const_cast<GsSprite*>(&(mSprite[var][i]));
+        }
+	}
+
+    return nullptr;
+}
+
+///
+// Process Routines
+///
+
+
+
+GsGraphics::~GsGraphics()
+{
+	freeBitmaps(maskedBitmap);
+
+	freeSprites();
+	freeFonts();
+	freeTilemap();
+}

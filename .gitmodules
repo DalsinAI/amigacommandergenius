@@ -1,0 +1,3 @@
+[submodule "src/engine/cosmos"]
+	path = src/engine/cosmos
+	url = https://gitlab.com/Dringgstein/cosmos.git

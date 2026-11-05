@@ -1,0 +1,95 @@
+#ifndef __GALAXYENGINE_H__
+#define __GALAXYENGINE_H__
+
+#include "engine/keen/KeenEngine.h"
+#include "res/CEGAGraphicsGalaxy.h"
+#include "menu/ComputerWrist.h"
+#include <base/GsEvent.h>
+
+/**
+ * The Galaxy engine derived from KeenEngine has the task to manage the whole Keen 4-6
+ * games including intro, title screen, game play, everything within
+ */
+
+namespace galaxy
+{
+
+bool setupAudio();
+
+bool loadLevelMusic(const int level);
+
+class GalaxyEngine : public KeenEngine
+{
+public:
+
+    const int mEp;
+
+    GalaxyEngine(const bool openedGamePlay,
+                 const int ep,
+                 const std::string &dataPath);
+
+    /**
+     * @brief ponder    Ponder cycle of the Galaxy Engine
+     * @param deltaT    time to do logics
+     */
+    void ponder(const float deltaT) override;
+
+    /**
+     * @brief render    Render what ever happens in the engine
+     */
+    void render() override;
+
+    /**
+     * @brief openMainMenu Open the famous swatch main menu
+     */
+    void openMainMenu() override;
+
+    /**
+     * @brief start Ingnition of the Keen galaxy engine
+     * @return if everything went fine true, otherwise false
+     */
+    virtual bool start() override;
+
+    /**
+     * @brief loadResources This is used for loading all the resources of the game the use has chosen.
+     *                      It loads graphics, sound and text into the memory
+     * @param flags     Tells what type(s) of resources to load
+     * @return  true if everything went fine, otherwise false.
+     */
+    bool loadResources( const Uint8 flags ) override;
+
+    /**
+     * @brief switchToPassive   Switch to passive mode meaning intro, title text will be cycling
+     */
+    void switchToPassive();
+
+    /**
+     * @brief switchToGameplay  Switch directly to gameplay and start certain level
+     * @param startLevel    Level which to start
+     * @param spriteVars    Sprite Variations
+     */
+    void switchToGameplay(const int startLevel,
+                          const std::vector<int> &spriteVars);
+
+    void pumpEvent(const std::shared_ptr<CEvent> &evPtr) override;
+
+    std::unique_ptr<ComputerWrist> mpComputerWrist;
+
+    // In case the are different sprites for the player used, this vector takes care of mapping the right one.
+    std::vector<int> mSpriteVars;
+};
+
+}
+
+// Events
+struct StartGalaxyEngine : public SwitchEngineEvent
+{
+    StartGalaxyEngine(const bool openedGamePlay,
+                      const int ep,
+                      const std::string &dataPath) :
+        SwitchEngineEvent( new galaxy::GalaxyEngine(openedGamePlay, ep, dataPath) )
+        { }
+};
+
+
+#endif /* __GALAXYENGINE_H__ */

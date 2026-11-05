@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2022 Gerhard Stein <gerstrong@gmail.com> -->
+<component type="desktop-application">
+  <id>io.sourceforge.clonekeenplus</id>
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>GPL-2.0+</project_license>
+
+  <name>Commander Genius</name>
+    
+  <summary>A Game Engine for "Commander Keen"</summary>
+  
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>gamepad</control>
+  </supports>
+
+    <description>
+  <p>
+ Commander-Genius aka CloneKeenPlus is an engine which interprets
+ Commander Keen 1-6, Dreams and Cosmos the Cosmic Adventure.
+    </p>
+  <p>
+  But there is more: How about four player coop, VGA graphics, remastered music and
+  many great mods to apply. There even exists the unoffical trilogy that was planned back then
+  (Keen 7-9). Eventhough that trilogy was never released, it got picked up by fans. 
+  With an integrated CG game store you can download every free game with one click and
+  start playing.
+  </p>
+  <p>
+ For registered Keen games you need the game data of the games
+ in order to play them. Check the Readme file for more information on that.
+ Episode 2, 3, 5 and 6 are registered versions which can be
+ purchased by 3D Realms, Apogee, GOG or bought by someone else.
+ If you still have the old games of the registered version,
+ then copy those into a reachable directory and give it a try.
+   </p>  
+  </description>
+  
+  <launchable type="desktop-id">io.sourceforge.clonekeenplus.desktop</launchable>
+  
+  <screenshots>
+
+    <screenshot type="default">
+      <caption>Commander Keen 4 in Original (left) and quit High Quality Pack (right)</caption>
+      <image type="source">https://clonekeenplus.sourceforge.io/img/Keen4HQP2020.png</image>
+    </screenshot>
+
+    <screenshot>
+      <caption>Second PLayer helping first Player to jump onto the tree branch.</caption>
+      <image type="source">https://clonekeenplus.sourceforge.io/img/SecondplayerHelpsFirst.png</image>
+    </screenshot>
+
+    <screenshot>
+      <caption>Multiplayer madness in Keen 1</caption>
+      <image type="source">https://clonekeenplus.sourceforge.io/img/multiplayerVoritcon.png</image>
+    </screenshot>
+
+  </screenshots>  
+  
+  <developer id="io.sourceforge.clonekeenplus">
+             <name>Gerhard Stein, Elias Oenal, Pelya and Contributors</name>
+  </developer>
+
+  <url type="homepage">https://clonekeenplus.sourceforge.io</url>
+  <categories>
+    <category>Game</category>
+</categories>
+
+  <releases>
+    <release version="3.5.1" date="2022-07-09">
+      <description>
+        <p>More Keen versions supported</p>
+        <p>Improved resolution system</p>
+      </description>
+    </release>
+    <release version="3.4.9" date="2022-06-25">
+      <description>
+        <p>More Keen versions supported</p>
+        <p>Improved resolution system</p>
+      </description>
+    </release>
+    <release version="3.1.3" date="2022-06-25">
+      <description>
+        <p>Crash fixes</p>
+      </description>
+    </release>
+    <release version="3.1.0" date="2022-05-20">
+      <description>
+        <p>New main menu theme</p>
+        <p>Collision fixes</p>
+        <p>Updated runtime</p>
+      </description>
+    </release>  
+    <release version="3.0.5" date="2021-09-26">
+      <description>
+        <p>More memory fixes</p>
+      </description>
+    </release>
+    <release version="3.0.2" date="2021-09-19">
+      <description>
+        <p>Added Cosmos Cosmic Adventure</p>
+        <p>Improved compatibility</p>
+        <p>More memory fixes</p>
+      </description>  
+    </release>    
+    <release version="2.8.2.5" date="2021-07-08">
+      <description>
+        <p>More memory fixes</p>
+      </description>  
+    </release>    
+    <release version="2.8.2.1" date="2021-07-07">
+      <description>
+        <p>Memory fixes</p>
+      </description>  
+    </release>  
+    <release version="2.8.2" date="2021-06-20">
+      <description>
+        <p>Improved decarmack</p>
+        <p>AI fixes, dropping platform fixes in Galaxy games</p>
+        <p>Some engine preparation for cosmos cosmic adventure</p>
+      </description>  
+    </release>
+    <release version="2.8.1" date="2021-05-29">
+      <description>
+        <p>More Keen Galaxy engine and mod fixes</p>
+        <p>Some Menu fixes</p>
+      </description>  
+    </release>
+    <release version="2.8.0" date="2021-04-11">
+      <description>
+        <p>More stable graphics engine</p>
+        <p>Improved logging</p>
+        <p>Open GL 2.1 is minimum now</p>
+        <p>Lots of OpenGL fixes</p>
+        <p>Boost library now is optional</p>
+        <p>First release as a Flatpak</p>
+      </description>
+    </release>
+    <release version="2.7.9" date="2021-04-05">
+      <description>
+        <p>First release as a Flatpak</p>
+      </description>
+    </release>
+  </releases>
+  
+
+  <content_rating type="oars-1.0">
+    <content_attribute id="violence-cartoon">mild</content_attribute>
+    <content_attribute id="violence-fantasy">mild</content_attribute>
+  </content_rating>
+
+</component>
+

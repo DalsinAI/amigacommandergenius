@@ -1,0 +1,160 @@
+stages:
+    - build
+    - upload
+    - release
+    
+variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+    ARTIFACT_LINUX: "cgenius-linux-${CI_COMMIT_SHORT_SHA}"
+    ARTIFACT_WIN_EXE: "cgenius-winexe-${CI_COMMIT_SHORT_SHA}"
+    ARTIFACT_WIN_ZIP: "cgenius-winzip-${CI_COMMIT_SHORT_SHA}"    
+    ARTIFACT_MACOS: "cgenius-macos-${CI_COMMIT_SHORT_SHA}"
+    ARTIFACT_LINUX_FILE: "cgenius-linux-${CI_COMMIT_SHORT_SHA}.tar.gz"
+    ARTIFACT_WIN_EXE_FILE: "cgenius-winexe-${CI_COMMIT_SHORT_SHA}.exe"
+    ARTIFACT_WIN_ZIP_FILE: "cgenius-winzip-${CI_COMMIT_SHORT_SHA}.zip"    
+    ARTIFACT_MACOS_FILE: "cgenius-macos-${CI_COMMIT_SHORT_SHA}.dmg"    
+    PACKAGE_REGISTRY_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/cgenius/daily"
+    
+
+build:windows-portable:
+    image: cgenius/crossbuild:winsdl
+    stage: build    
+    before_script:
+      - cd $CI_PROJECT_DIR
+      - mkdir -p /tmp && cd "$_"
+      - mkdir -p $CI_PROJECT_DIR/output
+      - cmake -DCMAKE_TOOLCHAIN_FILE="$OLDPWD/toolchains/toolchain-mingw.cmake" -DCMAKE_BUILD_TYPE=Release -DBUILD_COSMOS=1 -DUSE_BOOST=0 -DPULL_DLLS=1 -DAPPEND_SHA=1 -DSDL2_MIXER_INCLUDE_DIR=/usr/x86_64-w64-mingw32/include/SDL2 -DSDL2_INCLUDE_DIR=/usr/x86_64-w64-mingw32/include/SDL2 "$CI_PROJECT_DIR"
+    script:
+      - cmake --build .    
+      - cpack -G ZIP
+      - cp *.zip $CI_PROJECT_DIR/output
+    artifacts:
+      name: "CGenius-Win-$CI_COMMIT_SHORT_SHA"
+      expire_in: 1 week
+      paths:
+        - output/*
+        
+upload:windows-portable:
+    stage: upload
+    image: curlimages/curl:latest
+    only:
+    - tags        
+    script:
+        - "curl --header \"JOB-TOKEN: ${CI_JOB_TOKEN}\" --upload-file \"`ls -1 output/* | grep Release-win32.zip`\" \"${PACKAGE_REGISTRY_URL}/${ARTIFACT_WIN_ZIP_FILE}\""
+        
+    dependencies:
+        - build:windows-portable              
+        
+build:windows-installer:
+    image: cgenius/crossbuild:winnsis
+    stage: build
+    before_script:
+      - cd $CI_PROJECT_DIR
+      - mkdir -p /tmp && cd "$_"
+      - mkdir -p $CI_PROJECT_DIR/output
+      - cmake -DCMAKE_TOOLCHAIN_FILE="$OLDPWD/toolchains/toolchain-mingw.cmake" -DCMAKE_BUILD_TYPE=Release -DBUILD_COSMOS=1 -DUSE_BOOST=0 -DPULL_DLLS=1 -DAPPEND_SHA=1 -DSDL2_MIXER_INCLUDE_DIR=/usr/x86_64-w64-mingw32/include/SDL2 -DSDL2_INCLUDE_DIR=/usr/x86_64-w64-mingw32/include/SDL2 "$CI_PROJECT_DIR"
+    script:
+      - cmake --build .    
+      - cpack -G NSIS
+      - cp *.exe $CI_PROJECT_DIR/output
+    artifacts:
+      name: "CGenius-Win-$CI_COMMIT_SHORT_SHA"
+      expire_in: 1 week
+      paths:
+        - output/*
+        
+upload:windows-installer:
+    stage: upload
+    image: curlimages/curl:latest
+    only:
+    - tags        
+    script:
+        - "curl --header \"JOB-TOKEN: ${CI_JOB_TOKEN}\" --upload-file \"`ls -1 output/* | grep Release-win32.exe`\" \"${PACKAGE_REGISTRY_URL}/${ARTIFACT_WIN_EXE_FILE}\""
+        
+    dependencies:
+        - build:windows-installer           
+                      
+build:linux-generic:
+    image: cgenius/crossbuild:linux
+    stage: build
+    before_script:
+      - cd $CI_PROJECT_DIR
+      - mkdir -p /tmp && cd "$_"
+      - mkdir -p $CI_PROJECT_DIR/output
+      - cmake -DUSE_BOOST=0 -DBUILD_COSMOS=1 -DAPPEND_SHA=1 $CI_PROJECT_DIR "$CI_PROJECT_DIR"
+    script:
+      - cmake --build .    
+      - cpack -G TGZ
+      - cp *.tar.gz $CI_PROJECT_DIR/output
+    artifacts:
+      name: "$ARTIFACT_LINUX"
+      expire_in: 1 week
+      paths:
+        - output/*
+
+upload:linux-generic:
+    stage: upload
+    image: curlimages/curl:latest
+    only:
+    - tags        
+    script:
+        - "echo \"curl --header \"JOB-TOKEN: ${CI_JOB_TOKEN}\" --upload-file \"`ls -1 output/* | grep Release-generic.tar.gz`\" \"${PACKAGE_REGISTRY_URL}/${ARTIFACT_LINUX_FILE}\"\""
+        - "curl --header \"JOB-TOKEN: ${CI_JOB_TOKEN}\" --upload-file \"`ls -1 output/* | grep Release-generic.tar.gz`\" \"${PACKAGE_REGISTRY_URL}/${ARTIFACT_LINUX_FILE}\""
+        
+    dependencies:
+        - build:linux-generic        
+        
+build:macos-64bit:
+    image: cgenius/crossbuild:mac
+    stage: build    
+    before_script:
+      - cd $CI_PROJECT_DIR
+      - mkdir -p /tmp && cd "$_"
+      - mkdir -p $CI_PROJECT_DIR/output
+      - mkdir CGBuildMac
+      - cd CGBuildMac
+      - export PATH=$PATH:/tmp/osxcross/target/bin
+      - export CG_SOURCES=${CI_PROJECT_DIR}
+      - export OSXCROSSPATH=/tmp/osxcross
+      - export OSXOPT=${OSXCROSSPATH}/target/macports/pkgs/opt        
+      - export SDKROOT=${OSXOPT}/local    
+      - export MACOSX_DEPLOYMENT_TARGET=15.4
+      - x86_64-apple-darwin24.4-cmake -DCMAKE_TOOLCHAIN_FILE=${CG_SOURCES}/toolchains/toolchain-osxcross.cmake -DSDL2_LIBRARY=${SDKROOT}/lib/libSDL2.dylib -DSDL2_IMAGE_LIBRARY=${SDKROOT}/lib/libSDL2_image.dylib -DSDL2_MIXER_LIBRARY=${SDKROOT}/lib/libSDL2_mixer.dylib -DSDL2_TTF_LIBRARY=${SDKROOT}/lib/libSDL2_ttf.dylib -DCURL_LIBRARY=${SDKROOT}/lib/libcurl.dylib -DCMAKE_SHARED_LIBRARY_SUFFIX=".dylib" -DCMAKE_SYSTEM_PREFIX_PATH=${SDKROOT} -DAPPEND_SHA=1 -DCMAKE_BUILD_TYPE="Release" -DOSXCROSS=1 -DUSE_OPENGL=0 ${CG_SOURCES}
+
+    script:
+      - cmake --build .
+      - cp src/CGeniusExe ${CI_PROJECT_DIR}/src
+      - cd $CI_PROJECT_DIR
+      - bash buildMacOsBundle.sh      
+      - cp *.dmg $CI_PROJECT_DIR/output
+            
+    artifacts:
+      name: "$ARTIFACT_MACOS"
+      expire_in: 1 week
+      paths:
+        - output/*
+
+upload:macos-64bit:
+    stage: upload
+    image: curlimages/curl:latest
+    only:
+    - tags    
+    script:
+        - "curl --header \"JOB-TOKEN: ${CI_JOB_TOKEN}\" --upload-file \"`ls -1 output/* | grep Release-MacOS.dmg`\" \"${PACKAGE_REGISTRY_URL}/${ARTIFACT_MACOS_FILE}\""
+        
+    dependencies:
+        - build:macos-64bit   
+
+release:
+     stage: release
+     image: registry.gitlab.com/gitlab-org/release-cli:latest
+     only:
+     - tags
+     script:
+       - "echo \"Linux-generic url: ${PACKAGE_REGISTRY_URL}/${ARTIFACT_LINUX_FILE}\""
+       - release-cli create --name "Release $CI_COMMIT_TAG" --tag-name "$CI_COMMIT_TAG" 
+        --assets-link "{\"name\":\"${ARTIFACT_LINUX}\",\"url\":\"${PACKAGE_REGISTRY_URL}/${ARTIFACT_LINUX_FILE}\"}" 
+        --assets-link "{\"name\":\"${ARTIFACT_WIN_EXE}\",\"url\":\"${PACKAGE_REGISTRY_URL}/${ARTIFACT_WIN_EXE_FILE}\"}" 
+        --assets-link "{\"name\":\"${ARTIFACT_WIN_ZIP}\",\"url\":\"${PACKAGE_REGISTRY_URL}/${ARTIFACT_WIN_ZIP_FILE}\"}" 
+        --assets-link "{\"name\":\"${ARTIFACT_MACOS}\",\"url\":\"${PACKAGE_REGISTRY_URL}/${ARTIFACT_MACOS_FILE}\"}"
+        
