@@ -898,6 +898,67 @@ void CInput::flushFingerEvents()
 }
 
 
+#ifdef __amigaos__
+extern "C" int amiga_pointer_logical(int out_w, int out_h, int log_w, int log_h,
+                                     int integer_scale, int *x, int *y,
+                                     int *win_w, int *win_h);
+
+/**
+ * Full screen on AmigaOS: the mouse event's place, in the renderer's
+ * logical units, from Intuition's pointer (amiga/amiga_pointer.c). With
+ * OpenGPU's SDL2.module on a big RTG screen SDL's own numbers were away
+ * from the pointer.
+ */
+static void amigaFullscreenPointer(SDL_Event &ev)
+{
+    const Uint32 winID = (ev.type == SDL_MOUSEMOTION) ?
+                ev.motion.windowID : ev.button.windowID;
+    SDL_Window *win = SDL_GetWindowFromID(winID);
+    if(!win)
+        win = SDL_GetMouseFocus();
+    SDL_Renderer *ren = win ? SDL_GetRenderer(win) : nullptr;
+    if(!ren)
+        return;
+
+    int ow = 0, oh = 0, lw = 0, lh = 0;
+    if(SDL_GetRendererOutputSize(ren, &ow, &oh) != 0)
+        return;
+    SDL_RenderGetLogicalSize(ren, &lw, &lh);
+
+    int x = 0, y = 0, iw = 0, ih = 0;
+    if(!amiga_pointer_logical(ow, oh, lw, lh,
+                              SDL_RenderGetIntegerScale(ren) ? 1 : 0,
+                              &x, &y, &iw, &ih))
+        return;
+
+    static bool told = false;
+    if(!told)
+    {
+        told = true;
+        int ww = 0, wh = 0;
+        SDL_GetWindowSize(win, &ww, &wh);
+        gLogging.ftextOut("Full-screen pointer: Intuition window %dx%d, SDL window %dx%d, "
+                          "renderer output %dx%d, logical %dx%d; SDL gave %d,%d, "
+                          "Intuition's makes it %d,%d<br>",
+                          iw, ih, ww, wh, ow, oh, lw, lh,
+                          (ev.type == SDL_MOUSEMOTION) ? ev.motion.x : ev.button.x,
+                          (ev.type == SDL_MOUSEMOTION) ? ev.motion.y : ev.button.y,
+                          x, y);
+    }
+
+    if(ev.type == SDL_MOUSEMOTION)
+    {
+        ev.motion.x = x;
+        ev.motion.y = y;
+    }
+    else
+    {
+        ev.button.x = x;
+        ev.button.y = y;
+    }
+}
+#endif // __amigaos__
+
 void CInput::pollEvents()
 {
     // Semaphore
@@ -952,6 +1013,16 @@ void CInput::pollEvents()
     while( SDL_PollEvent( &Event ) )
     {
         bool passSDLEventVec = true;
+
+#ifdef __amigaos__
+        if(vidConfig.mFullscreen &&
+           (Event.type == SDL_MOUSEMOTION ||
+            Event.type == SDL_MOUSEBUTTONDOWN ||
+            Event.type == SDL_MOUSEBUTTONUP))
+        {
+            amigaFullscreenPointer(Event);
+        }
+#endif
 
         switch( Event.type )
         {
