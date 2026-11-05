@@ -175,3 +175,8 @@ Known limits
 - No downloader, no OpenGL, no Cosmo, no on-screen gamepad.
 - Keen 1 v1.3 (1990 shareware) can't be played (upstream doesn't know that
   version either); v1.31 can.
+- Vorticon (Keen 1-3) is untested on the Amiga: the only Keen 1 data at
+  hand is v1.3, and the v1.31 and Keen 4 shareware downloads keep their
+  files inside the 1990-92 installer's own .SHR archives, which no tool
+  here unpacks. Galaxy (Keen 4-6) is untested for the same reason (the
+  program needs the game's KEEN4E.EXE).
