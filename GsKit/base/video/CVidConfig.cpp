@@ -42,6 +42,12 @@ void CVidConfig::reset()
     //m_Resolution.depth=16;
 #endif
     Fullscreen=true;
+#elif defined(__amigaos__)
+    // A 640x400 window on the Workbench: twice the games' 320x200 (an RTG
+    // card's desktop rarely has room for 1920x1080, and a 68040 no time).
+    mDisplayRect.dim.x = 640;
+    mDisplayRect.dim.y = 400;
+    mFullscreen = false;
 #else
     mDisplayRect.dim.x = 1920;
     mDisplayRect.dim.y = 1080;

@@ -269,8 +269,13 @@ bool GameLauncher::setupMenu()
         ss << "No games detected!\n";
         ss << "You can copy some into:\n";
         ss << "\"" << solvedPath << "\",\n";
+#ifdef DOWNLOADER
         ss << "or download using \"+ More\" button\n";
         ss << "on the next page.\n";
+#else
+        ss << "one drawer per game.\n";
+        ss << "See Games/ReadMe.\n";
+#endif
 
         std::string msg(ss.str());
 
@@ -750,7 +755,14 @@ void GameLauncher::pumpEvent(const std::shared_ptr<CEvent> &evPtr)
 {
     if( std::dynamic_pointer_cast<const GMStart>(evPtr) )
     {
+        // No game found (an empty Games drawer): nothing to start, and
+        // getDirectory() would throw on the empty list.
+        if(mEntries.empty() || !mpGSSelList)
+            return;
+
         const int chosengame = mpGSSelList->getSelection();
+        if(chosengame < 0 || chosengame >= int(mEntries.size()))
+            return;
         setChosenGame(chosengame);
 
         // TODO: fetch the List of available patch files

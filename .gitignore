@@ -31,3 +31,7 @@ debian/README
 compile_commands.json
 .ccls-cache
 ios/libs
+
+# AmigaOS 3 port: build output and the packaged drawer (make -f amiga/Makefile.amigaos)
+/build/amigaos/
+/dist/

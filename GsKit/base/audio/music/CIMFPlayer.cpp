@@ -7,6 +7,7 @@
  *  Player which reproduces the IMF Data
  */
 
+#include <SDL_endian.h>
 #include "CIMFPlayer.h"
 #include "fileio/ResourceMgmt.h"
 #include <base/interface/FindFile.h>
@@ -39,6 +40,7 @@ bool CIMFPlayer::loadMusicFromFile(const std::string& filename)
     }
 
     int read_first = fread( &data_size, sizeof(word), 1, fp);
+    data_size = SDL_SwapLE16(data_size); // IMF files are little-endian
 
     if( read_first == 0)
     {
@@ -199,7 +201,7 @@ void CIMFPlayer::readBuffer(Uint8* buffer,
         {
             //read next IMF event
             const IMFChunkType Chunk = m_IMF_Data.getNextElement();
-            m_IMFDelay = Chunk.Delay;
+            m_IMFDelay = SDL_SwapLE16(Chunk.Delay); // kept as in the file
 
             //write reg+val to opl chip
             m_opl_emulator.Chip__WriteReg( Chunk.al_reg, Chunk.al_dat );

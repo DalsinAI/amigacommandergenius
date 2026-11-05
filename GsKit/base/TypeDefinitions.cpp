@@ -11,11 +11,9 @@ auto GETBYTE(const gs_byte *offset) -> gs_byte
 
 auto GETWORD(const gs_byte *ptr) -> word
 {
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-    return (ptr[0]<<8 | ptr[1]);
-#else
+    // Keen's files are little-endian on every host: read byte by byte,
+    // the same on a big-endian machine (the Amiga) as on a PC.
     return (ptr[0] | ptr[1] << 8);
-#endif
 }
 
 /**
@@ -39,11 +37,8 @@ auto READWORD(gs_byte *&ptr) -> word
  */
 auto GETLONGWORD(const gs_byte *ptr) -> longword
 {
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-    longword val = ptr[0]<<24 | ptr[1] << 16 | ptr[2] << 8 | ptr[3];
-#else
-    longword val = ptr[0] | ptr[1] << 8 | ptr[2] << 16 | ptr[3] << 24;
-#endif
+    // little-endian on every host, as GETWORD
+    longword val = ptr[0] | ptr[1] << 8 | ptr[2] << 16 | (longword)ptr[3] << 24;
     return val;
 }
 

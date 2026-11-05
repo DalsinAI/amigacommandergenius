@@ -12,6 +12,7 @@
  *  All three files are needed to extract the graphics
  */
 
+#include <SDL_endian.h>
 #include "CEGAGraphicsGalaxy.h"
 #include "graphics/GsGraphics.h"
 #include "graphics/GsGametext.h"
@@ -595,7 +596,10 @@ bool CEGAGraphicsGalaxy::readEGAHead()
     size_t chunkSize = dreams ? 4 : 3;
     for(size_t i = 0 ; i < numChunks ; i++)
     {
-        memcpy(&offset, headPtr, chunkSize);
+        // a 3- or 4-byte little-endian offset
+        offset = headPtr[0] | (headPtr[1] << 8) | (headPtr[2] << 16);
+        if(chunkSize == 4)
+            offset |= (unsigned long)(headPtr[3]) << 24;
         headPtr += chunkSize;
         offset &= offset_limit;
         m_egahead.push_back(offset);
@@ -656,7 +660,7 @@ std::vector<unsigned long> CEGAGraphicsGalaxy::readOutLenVec(const int ep,
             }
             else
             {
-                memcpy(&outlen, &compEgaGraphData[offset], 4);
+                outlen = GETLONGWORD(&compEgaGraphData[offset]); // little-endian
                 offset += 4;
             }
 
@@ -824,7 +828,7 @@ bool CEGAGraphicsGalaxy::begin()
             }
             else
             {
-                memcpy(&outlen, &CompEgaGraphData[offset], 4);
+                outlen = GETLONGWORD(&CompEgaGraphData[offset]); // little-endian
                 offset += 4;
             }
 
@@ -1014,6 +1018,10 @@ bool CEGAGraphicsGalaxy::readfonts()
             // ARM processor requires all ints and structs to be 4-byte aligned, so we're just using memcpy()
             FontHeadStruct FontHeadData, *FontHead = &FontHeadData;
             memcpy( FontHead, &(fontData.at(0)), sizeof(FontHeadStruct) );
+            // Height and Offset[] are little-endian words, Width[] bytes
+            FontHead->Height = SDL_SwapLE16(FontHead->Height);
+            for(auto &off : FontHead->Offset)
+                off = SDL_SwapLE16(off);
 
             if(FontHead->Height == 0)
             {
@@ -1169,6 +1177,7 @@ bool CEGAGraphicsGalaxy::readBitmaps()
     // ARM processor requires all ints and structs to be 4-byte aligned, so we're just using memcpy()
     BitmapHeadStruct BmpHead[epInfo.NumBitmaps];
     memcpy( BmpHead, &(m_egagraph.at(0).data.at(0)), epInfo.NumBitmaps*sizeof(BitmapHeadStruct));
+    swapLE16Structs(BmpHead, epInfo.NumBitmaps);
     SDL_Color *Palette = gGraphics.Palette.m_Palette;
 
     gGraphics.createEmptyBitmaps(1, epInfo.NumBitmaps);
@@ -1318,6 +1327,7 @@ bool CEGAGraphicsGalaxy::readMaskedBitmaps()
     // ARM processor requires all ints and structs to be 4-byte aligned, so we're just using memcpy()
     BitmapHeadStruct BmpMaskedHead[EpisodeInfo[ep].NumMaskedBitmaps];
     memcpy( BmpMaskedHead, &(m_egagraph.at(1).data.at(0)), EpisodeInfo[ep].NumMaskedBitmaps*sizeof(BitmapHeadStruct) );
+    swapLE16Structs(BmpMaskedHead, EpisodeInfo[ep].NumMaskedBitmaps);
     SDL_Color *Palette = gGraphics.Palette.m_Palette;
 
     gGraphics.createEmptyMaskedBitmaps(EpisodeInfo[ep].NumMaskedBitmaps);
@@ -1578,6 +1588,7 @@ bool CEGAGraphicsGalaxy::readSprites( const size_t numSprites,
     // ARM processor requires all ints and structs to be 4-byte aligned, so we're just using memcpy()
     std::vector<SpriteHeadStruct> sprHeads(numSprites, SpriteHeadStruct());
     memcpy( sprHeads.data(), &(headData.at(0)), numSprites*sizeof(SpriteHeadStruct) );
+    swapLE16Structs(sprHeads.data(), numSprites);
 
     const auto exportGfx = exportArgEnabled();
 
@@ -1949,9 +1960,10 @@ bool CEGAGraphicsGalaxy::readMiscStuff()
         Uint16 *dataPtr = nullptr;
         memcpy( &dataPtr, &(dataChunk.data), sizeof(Uint16 *) );
 
-        memcpy(&height, dataPtr, sizeof(Uint16) );
+        // little-endian words, into ints
+        height = GETWORD(reinterpret_cast<gs_byte*>(dataPtr));
         dataPtr++;
-        memcpy(&width, dataPtr, sizeof(Uint16) );
+        width = GETWORD(reinterpret_cast<gs_byte*>(dataPtr));
         dataPtr++;
 
         gLogging.ftextOut("misc width=%d height=%d index=%d misc=%d",
@@ -2033,7 +2045,7 @@ bool CEGAGraphicsGalaxy::readMiscStuff()
                 break;
             }*/
 
-            Uint16 pixelCount = *rlepointer;
+            Uint16 pixelCount = SDL_SwapLE16(*rlepointer); // little-endian
             if(pixelCount != 0xFFFF)
             {
                 if(pixelNum + pixelCount > expectedNumPixels)

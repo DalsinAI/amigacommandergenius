@@ -1,0 +1,155 @@
+# Commander Genius for AmigaOS 3.x, 68040/68060 + FPU, on OpenGPU's SDL 2.
+#
+#   make -f amiga/Makefile.amigaos -j2 \
+#        STOVE=/path/to/openamigagcc-16.2.0-open4 \
+#        NDK=/path/to/OpenNDK/Include_H SDL2KIT=/path/to/opengpu-sdk
+#
+# STOVE is GFOpenAmigaGCC 16.2.0-open4 or later. SDL2KIT is the OpenGPU
+# developer kit: libSDL2.a, libSDL2_image.a, libSDL2_mixer.a and
+# libSDL2_ttf.a (the program's halves of LIBS:OpenGPU/SDL2.module and its
+# satellites; FreeType is inside libSDL2_ttf.a). DEPS has the Team's
+# static zlib (amiga/deps/build-m68k-libs.sh zlib).
+#
+# As upstream's CMake build with DOWNLOADER, USE_OPENGL, USE_VIRTUALPAD,
+# USE_CRASHHANDLER and BUILD_COSMOS off: the Keen 1-6 engines, the Keen
+# Dreams engine (RefKeen) and Lua 5.3 (GsKit/base/lua) are in. The drawer
+# is build/amigaos/CommanderGenius and dist/CommanderGenius.
+
+STOVE   ?= $(HOME)/CradleLab/toolchain/openamigagcc-16.2.0-open4-x86_64-linux
+NDK     ?= $(HOME)/CradleLab/gfopensdk/OpenNDK/Include_H
+SDL2KIT ?= /mnt/amigachrome/team2/deps/opengpu-sdk
+DEPS    ?= /mnt/amigachrome/team2/deps/m68k-amigaos
+CC      = $(STOVE)/bin/m68k-amigaos-gcc
+CXX     = $(STOVE)/bin/m68k-amigaos-g++
+HOSTCC  ?= cc
+CPU     ?= -m68040 -m68881
+# -fno-tree-loop-distribute-patterns: GCC 16's loop miscompile (the kit's
+# sdl2-config gives it for GCC 16 too).
+OPT     ?= -O2 -fomit-frame-pointer -fno-tree-loop-distribute-patterns
+
+BUILD   = build/amigaos
+OBJDIR  = $(BUILD)/obj
+GEN     = $(BUILD)/gen
+OUT     = $(BUILD)/CommanderGenius
+DIST    = dist
+PROG    = CommanderGenius
+
+DEFS    = -D__amigaos__ -DRELEASE -DNDEBUG -DSYSTEM_DATA_DIR=\"PROGDIR:\" \
+          -DGIT_SHA=v3.6.4 -DGIT_BRANCH=amiga
+INC     = -Iamiga/include -Isrc -IGsKit -IGsKit/base -IGsKit/base/lua \
+          -Isrc/engine -I$(GEN) -I$(SDL2KIT)/include/SDL2 -I$(DEPS)/include \
+          -I$(NDK)
+COMMON  = -noixemul $(OPT) $(CPU) $(DEFS) $(INC)
+CXXFLAGS = $(COMMON) -std=gnu++17 -include amiga/include/amiga_prelude.h
+CFLAGS   = $(COMMON) -std=gnu99
+AMIGAWARN = -Wall -Wextra
+
+# Every path the program, libstdc++ and SDL_ttf give the C library or
+# SDL goes through amiga/amiga_paths.c first: upstream joins its paths
+# the Unix way ("PROGDIR:" + "/" + "games", "./x", "a//b"), which on
+# AmigaDOS means the parent drawer.
+WRAPS   = fopen freopen open stat lstat opendir mkdir rmdir remove unlink \
+          rename chdir access SDL_RWFromFile IMG_Load TTF_OpenFont \
+          TTF_OpenFontIndex Mix_LoadMUS
+LDFLAGS = -noixemul $(CPU) $(foreach w,$(WRAPS),-Wl,--wrap=$(w))
+LIBS    = -L$(DEPS)/lib -L$(SDL2KIT)/lib -lSDL2_mixer -lSDL2_image \
+          -lSDL2_ttf -lSDL2 -lz -lamiga -lm
+
+# Upstream's sources, as its CMakeLists.txt files list them (less the
+# downloader, OpenGL, the GP2X glue, Cosmos and Lua's stand-alone shell).
+SRCDIRS = GsKit/base GsKit/base/audio GsKit/base/audio/base \
+          GsKit/base/audio/music GsKit/base/audio/sound \
+          GsKit/base/interface GsKit/base/interface/property_tree \
+          GsKit/base/lua GsKit/base/video GsKit/base/video/scaler \
+          GsKit/fileio GsKit/graphics GsKit/widgets \
+          src src/dialog src/engine src/engine/core src/engine/core/menu \
+          src/engine/core/menu/widgets src/engine/core/mode \
+          src/engine/depklite src/engine/keen src/engine/keen/dreams \
+          src/engine/keen/galaxy src/engine/keen/galaxy/common \
+          src/engine/keen/galaxy/common/ai \
+          src/engine/keen/galaxy/common/ai/platform \
+          src/engine/keen/galaxy/common/dialog src/engine/keen/galaxy/ep4 \
+          src/engine/keen/galaxy/ep4/ai src/engine/keen/galaxy/ep5 \
+          src/engine/keen/galaxy/ep5/ai src/engine/keen/galaxy/ep6 \
+          src/engine/keen/galaxy/ep6/ai src/engine/keen/galaxy/menu \
+          src/engine/keen/galaxy/res src/engine/keen/vorticon \
+          src/engine/keen/vorticon/ai src/engine/keen/vorticon/dialog \
+          src/engine/keen/vorticon/finale src/engine/keen/vorticon/playgame \
+          src/engine/refkeen src/engine/unzip src/fileio \
+          src/fileio/compression
+KDREAMS = id_ca id_in id_mm id_rf_a id_rf id_sd id_us_a id_us id_vw_a \
+          id_vw_ae id_vw kd_act1 kd_act2 kd_demo kd_keen kd_main kd_play \
+          statetype_ptr_conversion soft gelib jam_io lscr/loadscn2 lzhuf
+EXCLUDE = GsKit/base/lua/lua.c GsKit/base/video/COpenGL.cpp \
+          src/engine/xxd.c src/engine/gamedownloader.cpp \
+          src/engine/unzip/iowin32.c src/engine/unzip/miniunz.c
+SRC     = $(filter-out $(EXCLUDE),$(foreach d,$(SRCDIRS),$(wildcard $(d)/*.cpp $(d)/*.c))) \
+          $(KDREAMS:%=src/engine/refkeen/kdreams/%.cpp)
+AMIGASRC = amiga/amiga_paths.c amiga/amiga_screens.c amiga/stack.c \
+          amiga/pthread_stubs.c
+OBJS    = $(patsubst %,$(OBJDIR)/%.o,$(basename $(SRC) $(AMIGASRC)))
+
+# Per directory, as upstream's CMake sets them.
+REFKEEN_DEFS = -DREFKEEN_VER_KDREAMS -DREFKEEN_VER_KDREAMS_ANYEGA_ALL \
+          -DGRMODE=EGAGR -Isrc/engine/refkeen -Isrc/engine/refkeen/kdreams
+$(OBJDIR)/src/engine/refkeen/%.o: EXTRA = $(REFKEEN_DEFS)
+$(OBJDIR)/src/engine/unzip/%.o: EXTRA = -DIOAPI_NO_64 -Isrc/engine/unzip
+$(OBJDIR)/GsKit/base/lua/%.o: EXTRA = -DLUA_USE_C89
+
+ICONS   = $(wildcard amiga/icons/*.info)
+
+all: $(OUT)/$(PROG) package
+
+$(OUT)/$(PROG): $(OBJS) | $(OUT)
+	$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+
+# The launcher's menu is built into the program (as upstream's xxd step).
+$(GEN)/gamelauncher.menu.h: src/engine/gamelauncher.menu src/engine/xxd.c
+	@mkdir -p $(GEN)
+	$(HOSTCC) -std=gnu89 -O1 -o $(GEN)/xxd src/engine/xxd.c
+	cd src/engine && $(CURDIR)/$(GEN)/xxd -i gamelauncher.menu $(CURDIR)/$@
+
+$(OBJDIR)/src/engine/gameselector.o $(OBJDIR)/src/engine/CGameLauncher.o: $(GEN)/gamelauncher.menu.h
+
+package: $(OUT)/$(PROG) $(ICONS) AMIGA_PORT.md COPYRIGHT README.md amiga/Games-ReadMe
+	mkdir -p $(OUT)/global $(OUT)/Games
+	cp -R vfsroot/global/. $(OUT)/global/
+	cp amiga/Games-ReadMe $(OUT)/Games/ReadMe
+	cp AMIGA_PORT.md $(OUT)/ReadMe
+	cp README.md $(OUT)/README-CG.md
+	cp COPYRIGHT $(OUT)/COPYING.txt
+	cp changelog.txt $(OUT)/changelog.txt
+	cp amiga/icons/CommanderGenius.info amiga/icons/ReadMe.info \
+	   amiga/icons/README-CG.md.info amiga/icons/COPYING.txt.info \
+	   amiga/icons/changelog.txt.info $(OUT)/
+	cp amiga/icons/Data.info $(OUT)/global.info
+	cp amiga/icons/Data.info $(OUT)/global/gfx.info
+	cp amiga/icons/Games.info $(OUT)/Games.info
+	cp amiga/icons/ReadMe.info $(OUT)/Games/ReadMe.info
+	cp amiga/icons/CommanderGenius-drawer.info $(BUILD)/CommanderGenius.info
+	rm -rf $(DIST)/CommanderGenius $(DIST)/CommanderGenius.info
+	mkdir -p $(DIST)
+	cp -R $(OUT) $(DIST)/CommanderGenius
+	cp $(BUILD)/CommanderGenius.info $(DIST)/CommanderGenius.info
+
+$(OBJDIR)/amiga/%.o: amiga/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(AMIGAWARN) -c -o $@ $<
+
+$(OBJDIR)/%.o: %.cpp amiga/include/amiga_prelude.h
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(EXTRA) -c -o $@ $<
+
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(EXTRA) -c -o $@ $<
+
+objs: $(OBJS)
+
+$(OUT):
+	mkdir -p $@
+
+clean:
+	rm -rf $(BUILD)
+
+.PHONY: all package objs clean

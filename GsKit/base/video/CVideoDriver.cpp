@@ -95,9 +95,20 @@ void CVideoDriver::addTextureRefToVirtPadRender(GsTexture& textureRef,
 #endif
 
 
+#ifdef __amigaos__
+// amiga/amiga_screens.c: SDL2.module (OpenGPU 0.6) leaves empty "SDL"
+// screens behind after a fullscreen window.
+extern "C" void amiga_screens_snapshot(void);
+extern "C" void amiga_screens_close_leftovers(void);
+#endif
+
 bool CVideoDriver::init()
 {
     mVidConfig.reset();
+
+#ifdef __amigaos__
+    amiga_screens_snapshot();
+#endif
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0)
     {
@@ -495,6 +506,9 @@ void CVideoDriver::stop()
     {
         mpVideoEngine = nullptr;
         SDL_Quit();
+#ifdef __amigaos__
+        amiga_screens_close_leftovers();
+#endif
     }
 }
 

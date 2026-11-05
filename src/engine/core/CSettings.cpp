@@ -322,8 +322,15 @@ bool CSettings::loadDrvCfg()
     gTimer.setFPS( float(framerate) );
 
 
+#ifdef __amigaos__
+    // The OPL (AdLib) music and the sounds are emulated on the 68k:
+    // 22 kHz mono is what a 68040/68060 keeps up with.
+    int audio_rate = 22050;
+    int audio_channels = 1;
+#else
     int audio_rate = 44000;
     int audio_channels = 2;
+#endif
     int audio_format = AUDIO_U8;
     bool audio_sndblaster = false;
 

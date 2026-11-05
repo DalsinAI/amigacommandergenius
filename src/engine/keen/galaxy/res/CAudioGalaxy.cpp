@@ -5,6 +5,7 @@
  *      Author: gerstrong
  */
 
+#include <SDL_endian.h>
 #include "CAudioGalaxy.h"
 #include "fileio/ResourceMgmt.h"
 #include "fileio/compression/CHuffman.h"
@@ -408,6 +409,9 @@ bool CAudioGalaxy::LoadFromAudioCK(const unsigned int dictOffset)
         audiohed.resize(length/sizeof(u_int));
 
         File.read( (char*) &(audiohed.front()), length);
+
+        for(auto &v : audiohed) // AUDIOHED is little-endian
+            v = SDL_SwapLE32(v);
     }
     else // no file found? Use the embedded one!
     {
@@ -420,14 +424,14 @@ bool CAudioGalaxy::LoadFromAudioCK(const unsigned int dictOffset)
         uint32_t number_of_audiorecs = 0;
         for( ; audiohedptr < audioendhedptr ; audiohedptr++ )
         {
-            if(*audiohedptr == audiofilecompsize)
+            if(SDL_SwapLE32(*audiohedptr) == audiofilecompsize)
             {
                 for( const uint32_t *startptr = audiostarthedptr ;
                      audiohedptr > startptr ; audiohedptr-- )
                 {
                     // Get the number of Audio files we have
                     number_of_audiorecs++;
-                    if(*audiohedptr == 0x0)
+                    if(SDL_SwapLE32(*audiohedptr) == 0x0)
                         break;
                 }
                 break;
@@ -436,7 +440,7 @@ bool CAudioGalaxy::LoadFromAudioCK(const unsigned int dictOffset)
 
         for(size_t i=0 ; i<number_of_audiorecs ; i++)
         {
-            audiohed.push_back(*audiohedptr);
+            audiohed.push_back(SDL_SwapLE32(*audiohedptr)); // little-endian
             audiohedptr++;
         }
 
@@ -501,7 +505,7 @@ bool CAudioGalaxy::LoadFromAudioCK(const unsigned int dictOffset)
             const uint32_t *AudioCompFileData32 = reinterpret_cast<uint32_t*>(
                         reinterpret_cast<void*>(AudioCompFileData.data() + audio_start));
 
-            outsize = *AudioCompFileData32;
+            outsize = SDL_SwapLE32(*AudioCompFileData32); // little-endian
 
             const unsigned long insize = audio_end-audio_comp_data_start;
 
@@ -531,7 +535,7 @@ bool CAudioGalaxy::LoadFromAudioCK(const unsigned int dictOffset)
             const uint32_t *AudioCompFileData32 = reinterpret_cast<uint32_t*>(
                         reinterpret_cast<void*>(AudioCompFileData.data() + audio_start));
 
-            outsize = *AudioCompFileData32;
+            outsize = SDL_SwapLE32(*AudioCompFileData32); // little-endian
             imfdata.resize(outsize);
 
             gs_byte *imfdataPtr = reinterpret_cast<gs_byte *>(imfdata.data());

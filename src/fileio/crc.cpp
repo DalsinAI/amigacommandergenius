@@ -4,6 +4,7 @@
 #include "crc.h"
 #include <stdlib.h>
 #include <string.h>
+#include <SDL_endian.h>
 
 #ifndef LITTLE_ENDIAN
 #define LITTLE_ENDIAN 1
@@ -40,12 +41,15 @@ unsigned int getcrc32(unsigned char *data, int len)
     unsigned int        p;
     unsigned char       *e = (data + len);
 
+    // As a PC computes it (the game checks the result against PC values):
+    // little-endian words, and the "LITTLE_ENDIAN" steps below on any machine.
     memcpy( &p, data, sizeof(p) );
+    p = SDL_SwapLE32(p);
     result = ~p;
     data += sizeof(p);
     while( data<e )
     {
-#if defined(LITTLE_ENDIAN)
+#if defined(LITTLE_ENDIAN) || defined(__amigaos__)
         result = crctab[result & 0xff] ^ result >> 8;
         result = crctab[result & 0xff] ^ result >> 8;
         result = crctab[result & 0xff] ^ result >> 8;
@@ -57,7 +61,7 @@ unsigned int getcrc32(unsigned char *data, int len)
         result = crctab[result >> 24] ^ result << 8;
 #endif
         memcpy( &p, data, sizeof(p) );
-        result ^= p;
+        result ^= SDL_SwapLE32(p);
         data += sizeof(p);
     }
 

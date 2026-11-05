@@ -9,6 +9,7 @@
  */
 
 #include "Cunlzexe.h"
+#include <SDL_endian.h>
 /* unlzexe ver 0.5 (PC-VAN UTJ44266 Kou )
 *   UNLZEXE converts the compressed file by lzexe(ver.0.90,0.91) to the
 *   UNcompressed executable one.
@@ -169,6 +170,8 @@ int Cunlzexe::rdhead(BYTE *data_ptr ,int *ver)
     long entry;
 
     memcpy(ihead, data_ptr, sizeof ihead);
+    for(unsigned i=0 ; i<sizeof ihead/sizeof ihead[0] ; i++) // little-endian
+        ihead[i] = SDL_SwapLE16(ihead[i]);
     memcpy (ohead, ihead, sizeof ohead);
     if((ihead [0] != 0x5a4d && ihead [0] != 0x4d5a) ||
     		ihead [0x0d] != 0 || ihead [0x0c] != 0x1c)
@@ -195,6 +198,8 @@ int Cunlzexe::mkreltbl(BYTE *p_data, std::vector<BYTE> &outdata,int ver)
 
     fpos=(long)(ihead[0x0b]+ihead[4])<<4;		/* goto CS:0000 */
     memcpy(inf, &p_data[fpos],  (sizeof inf[0]) *  0x08);
+    for(unsigned i=0 ; i<0x08 ; i++) // little-endian
+        inf[i] = SDL_SwapLE16(inf[i]);
     ohead[0x0a]=inf[0];		/* IP */
     ohead[0x0b]=inf[1];		/* CS */
     ohead[0x08]=inf[2];		/* SP */
@@ -398,7 +403,11 @@ void Cunlzexe::wrhead(std::vector<BYTE> &outdata) {
     ohead[1]=((WORD_16BIT)loadsize+(ohead[4]<<4)) & 0x1ff;	/* v0.7 */
     ohead[2]=(WORD_16BIT)((loadsize+((long)ohead[4]<<4)+0x1ff) >> 9); /* v0.7 */
 
-    memcpy(&outdata[0], ohead, (sizeof ohead[0])*0x0e );
+    for(unsigned i=0 ; i<0x0e ; i++) // the MZ header, little-endian
+    {
+        outdata[2*i]   = ohead[i] & 0xFF;
+        outdata[2*i+1] = ohead[i] >> 8;
+    }
 }
 
 /*-------------------------------------------*/

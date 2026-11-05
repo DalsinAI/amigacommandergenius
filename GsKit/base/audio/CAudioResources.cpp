@@ -170,7 +170,18 @@ void CAudioResources::generateBeep(gs_byte *waveform,
         // For all the channel set this value
         for(int i=0 ; i<channels ; i++)
         {
-            memcpy(&waveform[offset], &wavesample, sampleSize);
+            // one sample of sampleSize bytes, in the machine's byte order
+            // (a memcpy of the int's first bytes is right only on a
+            // little-endian machine)
+            if(sampleSize == 2)
+            {
+                const Sint16 s16 = Sint16(wavesample);
+                memcpy(&waveform[offset], &s16, sizeof(s16));
+            }
+            else
+            {
+                waveform[offset] = gs_byte(wavesample);
+            }
             offset += sampleSize;
         }
     }
@@ -246,7 +257,18 @@ void CAudioResources::generateWave(gs_byte* waveform,
         prevsample = sample;
 
         offset += (channels*wavetime*waveSampleSize);
-        memcpy(&wave, &waveform[offset-waveSampleSize], waveSampleSize);
+        // the last sample written, back into an int (see generateBeep)
+        if(waveSampleSize == 2)
+        {
+            Sint16 s16;
+            memcpy(&s16, &waveform[offset-waveSampleSize], sizeof(s16));
+            wave = s16;
+        }
+        else
+        {
+            const gs_byte b8 = waveform[offset-waveSampleSize];
+            wave = (silence == 0) ? int(Sint8(b8)) : int(b8);
+        }
     }
 }
 

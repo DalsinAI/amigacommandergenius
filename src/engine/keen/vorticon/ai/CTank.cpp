@@ -26,7 +26,7 @@ CVorticonSpriteObject(p_map, x, y, objtype, 0)
 	shotHeight = 0; 
     gs_byte *ptr = gKeenFiles.exeFile.getRawData();
 	ptr += 0x4900;
-	memcpy(&shotHeight, ptr, 1 );	
+	shotHeight = *ptr; // one byte, on any machine
 	shotHeight <<= STC;
 }
 

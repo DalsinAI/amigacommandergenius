@@ -165,7 +165,9 @@ void CPatcher::process()
 					if(readIntValueAndWidth(textline, number, width))
 					{
 						// In this case we have a number
-						memcpy(m_data+offset, &number, width);
+						// little-endian into the game's data, on any machine
+						for(size_t b = 0 ; b < size_t(width) ; b++)
+							m_data[offset+b] = (unsigned char)(number >> (8*b));
 						offset+=width;
 					}
 					else if(readPatchString(textline, patchtext))

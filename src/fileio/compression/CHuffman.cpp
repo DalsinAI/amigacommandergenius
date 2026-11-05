@@ -8,6 +8,7 @@
 #include "CHuffman.h"
 #include <base/interface/FindFile.h>
 #include <fstream>
+#include <SDL_endian.h>
 
 const unsigned int DICT_SIG_BYTES = 6;
 const uint8_t DICTSIG[DICT_SIG_BYTES] = { 0xFD, 0x01, 0x00, 0x00, 0x00, 0x00 };
@@ -120,10 +121,11 @@ void CHuffman::expand(gs_byte *pin, gs_byte *pout,
 
 		do
 		{
+			// the dictionary is kept as in the file: little-endian
 			if(c & mask)
-				nextnode = m_nodes[curnode].bit1;
+				nextnode = SDL_SwapLE16(m_nodes[curnode].bit1);
 			else
-				nextnode = m_nodes[curnode].bit0;
+				nextnode = SDL_SwapLE16(m_nodes[curnode].bit0);
 
 
 			if(nextnode < 256)

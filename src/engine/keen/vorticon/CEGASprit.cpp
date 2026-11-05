@@ -65,16 +65,16 @@ bool CEGASprit::loadHead(char *data)
 	
     for(int i=0 ; i<mNumsprites ; i++ )
     {
-    	memcpy(&(EGASpriteModell[i].width),data+128*i,2);
-    	memcpy(&(EGASpriteModell[i].height),data+128*i+2,2);
-    	memcpy(&(EGASpriteModell[i].location_offset),data+128*i+4,2);
-    	memcpy(&(EGASpriteModell[i].location),data+128*i+6,2);
-    	memcpy(&(EGASpriteModell[i].hitbox_l),data+128*i+8,2);
-    	memcpy(&(EGASpriteModell[i].hitbox_u),data+128*i+10,2);
-    	memcpy(&(EGASpriteModell[i].hitbox_r),data+128*i+12,2);
-    	memcpy(&(EGASpriteModell[i].hitbox_b),data+128*i+14,2);
+    	EGASpriteModell[i].width = GETWORD(reinterpret_cast<gs_byte*>(data+128*i)); // little-endian
+    	EGASpriteModell[i].height = GETWORD(reinterpret_cast<gs_byte*>(data+128*i+2)); // little-endian
+    	EGASpriteModell[i].location_offset = GETWORD(reinterpret_cast<gs_byte*>(data+128*i+4)); // little-endian
+    	EGASpriteModell[i].location = GETWORD(reinterpret_cast<gs_byte*>(data+128*i+6)); // little-endian
+    	EGASpriteModell[i].hitbox_l = GETWORD(reinterpret_cast<gs_byte*>(data+128*i+8)); // little-endian
+    	EGASpriteModell[i].hitbox_u = GETWORD(reinterpret_cast<gs_byte*>(data+128*i+10)); // little-endian
+    	EGASpriteModell[i].hitbox_r = GETWORD(reinterpret_cast<gs_byte*>(data+128*i+12)); // little-endian
+    	EGASpriteModell[i].hitbox_b = GETWORD(reinterpret_cast<gs_byte*>(data+128*i+14)); // little-endian
     	memcpy(EGASpriteModell[i].name,data+128*i+16,12);
-    	memcpy(&(EGASpriteModell[i].hv_offset),data+128*i+28,4);
+    	EGASpriteModell[i].hv_offset = GETLONGWORD(reinterpret_cast<gs_byte*>(data+128*i+28)); // little-endian
 		
     	EGASpriteModell[i].width *= 8; // Where the width is divided by 8
     	EGASpriteModell[i].hitbox_l >>= 8;

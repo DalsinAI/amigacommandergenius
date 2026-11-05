@@ -32,7 +32,7 @@ jumpcounter(0)
 
     gs_byte *ptr = gKeenFiles.exeFile.getRawData();
 	ptr += 0xFF90;
-	memcpy(&bounceAmount, ptr, 1 );
+	bounceAmount = *ptr; // one byte, on any machine
 }
 
 

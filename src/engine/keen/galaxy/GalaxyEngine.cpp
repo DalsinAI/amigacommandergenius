@@ -101,7 +101,7 @@ bool loadLevelMusic(const int level)
 
         gs_byte* musictable_start = rawDataPtr+GalaxySongAssignments[Idx];
 
-        memcpy( &track, musictable_start+level*sizeof(Uint16), sizeof(Uint16));
+        track = GETWORD(musictable_start+level*sizeof(Uint16)); // little-endian
     }
 
     if(track > 30)

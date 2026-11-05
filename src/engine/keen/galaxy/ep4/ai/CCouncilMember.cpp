@@ -53,7 +53,7 @@ m_timer(0)
 	NumberToRescue = 0;
     gs_byte *ptr = gKeenFiles.exeFile.getRawData();
 	ptr += 0x6AE6;
-	memcpy(&NumberToRescue, ptr, 1 );
+	NumberToRescue = *ptr; // one byte, on any machine
 
     const auto fullFName = JoinPaths(gKeenFiles.gameDir, "council.lua");
     mLua.loadFile(fullFName);
