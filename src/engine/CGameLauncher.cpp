@@ -268,7 +268,15 @@ bool GameLauncher::setupMenu()
 
         ss << "No games detected!\n";
         ss << "You can copy some into:\n";
+#ifdef __amigaos__
+        // The search path is PROGDIR:, joined the Unix way ("PROGDIR:/games"):
+        // name the drawer as the Workbench shows it.
+        (void)solvedPath;
+        ss << "the \"Games\" drawer beside\n";
+        ss << "CommanderGenius,\n";
+#else
         ss << "\"" << solvedPath << "\",\n";
+#endif
 #ifdef DOWNLOADER
         ss << "or download using \"+ More\" button\n";
         ss << "on the next page.\n";
@@ -763,6 +771,44 @@ void GameLauncher::pumpEvent(const std::shared_ptr<CEvent> &evPtr)
         const int chosengame = mpGSSelList->getSelection();
         if(chosengame < 0 || chosengame >= int(mEntries.size()))
             return;
+
+        // An EXE whose version Commander Genius does not know (Keen 1
+        // v1.3, for one) gives the engine none of the offsets it reads the
+        // tiles, texts and sounds by: upstream started it anyway and died
+        // on the empty tile table (std::out_of_range). Say so instead.
+        {
+            const auto &entry = mEntries[static_cast<size_t>(chosengame)];
+            const bool isLua =
+                    stringcaseequal(GetFileExtension(entry.exefilename), "lua");
+            // Keen 1-3 only: the Vorticon engine has no way round a
+            // missing tile table. (The Galaxy engine and Keen Dreams have
+            // other paths, so their unknown versions are left to try.)
+            if(entry.version <= 0 && !isLua &&
+               entry.episode >= 1 && entry.episode <= 3)
+            {
+                const std::string exe = GetBaseFilename(entry.exefilename);
+                gLogging.ftextOut(FONTCOLORS::RED,
+                                  "%s: this version of Keen %d is not supported.<br>",
+                                  exe.c_str(), int(entry.episode));
+                std::stringstream ss;
+                ss << "This " << exe << " is a version\n";
+                ss << "of Keen " << entry.episode << " that Commander Genius\n";
+                ss << "does not know: it can't start it.\n";
+                ss << "\n";
+                if(entry.episode == 1)
+                {
+                    ss << "Keen 1 works as v1.10, v1.31\n";
+                    ss << "or v1.34 (the shareware: v1.31).\n";
+                }
+                else
+                {
+                    ss << "Keen " << entry.episode << " works as v1.00 or v1.31.\n";
+                }
+                showMessageBox(ss.str());
+                return;
+            }
+        }
+
         setChosenGame(chosengame);
 
         // TODO: fetch the List of available patch files
@@ -845,6 +891,15 @@ void GameLauncher::ponderGameSelDialog(const float deltaT)
     if( gInput.getExitEvent() )
     {
         mMustquit = true;
+        return;
+    }
+
+    // Esc (Back) quits the launcher wherever the focus is. Upstream gives
+    // it only to the game list, and the launcher starts with the Start
+    // button focused, so Esc did nothing there.
+    if( gInput.getPressedCommand(IC_BACK) )
+    {
+        gEventManager.add( new GMQuit() );
         return;
     }
 
@@ -1045,6 +1100,14 @@ void GameLauncher::ponder(const float deltaT)
 
     if(mpMsgDialog)
     {
+        // Esc closes the message as its Ok button does (the next Esc then
+        // quits the launcher).
+        if( gInput.getPressedCommand(IC_BACK) )
+        {
+            mpMsgDialog = nullptr;
+            return;
+        }
+
         // Command (Keyboard/Joystick) events for the game center dialog
         for( int cmd = IC_LEFT ; cmd < MAX_COMMANDS ; cmd++ )
         {
