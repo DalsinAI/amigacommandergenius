@@ -549,8 +549,14 @@ bool CEGAGraphicsGalaxy::readEGAHead()
     if(File) // File exists!
     {
         size_t egaheadlen = 0;
+        #ifdef __amigaos__
+        // libnix (dos.library) does not seek past the end: the size plus one
+        File.seekg(0,std::ios::end);
+        egaheadlen = size_t(File.tellg()) + 1;
+        #else
         File.seekg(1,std::ios::end);
         egaheadlen = File.tellg();
+        #endif
 
         // TODO: Keen 6 vs Mirror mod. Mirror mod shows as count one chunk more, please check!
         numChunks = egaheadlen/3; // 24-bit chunks
@@ -767,8 +773,14 @@ bool CEGAGraphicsGalaxy::begin()
     }
 
     size_t egagraphlen = 0;
+    #ifdef __amigaos__
+    // libnix (dos.library) does not seek past the end: the size plus one
+    File.seekg(0,std::ios::end);
+    egagraphlen = size_t(File.tellg()) + 1;
+    #else
     File.seekg(1,std::ios::end);
     egagraphlen = File.tellg();
+    #endif
     if(egagraphlen == 0)
     {
         gLogging.textOut(FONTCOLORS::RED, "Error the file \"" + filename + "\" is empty!");

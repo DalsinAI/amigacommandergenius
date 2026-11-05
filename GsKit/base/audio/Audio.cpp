@@ -219,6 +219,18 @@ void Audio::destroy()
 
     m_OPL_Player.shutdown();
 
+    // The samples SDL_mixer decoded (the launcher's and menus' sounds) and
+    // the game's sound slots: with SDL2_mixer.module their memory is the
+    // module's, so free them before the device goes.
+    while(mCallbackRunning);
+    for(auto &snd : mSoundFileMap)
+    {
+        if(snd.second)
+            Mix_FreeChunk(snd.second);
+    }
+    mSoundFileMap.clear();
+    mpAudioRessources.reset();
+
     Mix_CloseAudio();
 
 }

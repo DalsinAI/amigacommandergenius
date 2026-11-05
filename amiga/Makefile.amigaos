@@ -85,8 +85,8 @@ EXCLUDE = GsKit/base/lua/lua.c GsKit/base/video/COpenGL.cpp \
           src/engine/unzip/iowin32.c src/engine/unzip/miniunz.c
 SRC     = $(filter-out $(EXCLUDE),$(foreach d,$(SRCDIRS),$(wildcard $(d)/*.cpp $(d)/*.c))) \
           $(KDREAMS:%=src/engine/refkeen/kdreams/%.cpp)
-AMIGASRC = amiga/amiga_paths.c amiga/amiga_screens.c amiga/stack.c \
-          amiga/pthread_stubs.c
+AMIGASRC = amiga/amiga_paths.c amiga/amiga_screens.c amiga/amiga_pointer.c \
+          amiga/stack.c amiga/pthread_stubs.c
 OBJS    = $(patsubst %,$(OBJDIR)/%.o,$(basename $(SRC) $(AMIGASRC)))
 
 # Per directory, as upstream's CMake sets them.

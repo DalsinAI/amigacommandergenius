@@ -104,9 +104,43 @@ What was done
   - 16-bit sound: SDL's AUDIO_S16/AUDIO_U16 are the little-endian formats,
     but the mixers here make native samples: amiga/include/amiga_prelude.h
     makes them AUDIO_S16SYS/AUDIO_U16SYS.
-- CGameLauncher: the "no games" message names the drawer (no "+ More"
-  button), and starting with an empty list does nothing (upstream threw
-  std::out_of_range).
+- CGameLauncher: the "no games" message names the drawer as "the Games
+  drawer beside CommanderGenius" (upstream printed the search path joined
+  the Unix way, "PROGDIR:/games"; no "+ More" button), and starting with
+  an empty list does nothing (upstream threw std::out_of_range).
+- CGameLauncher: a game whose EXE version Commander Genius doesn't know
+  (Keen 1 v1.3 shareware: KEEN1.EXE unpacks to 99998 bytes; the program
+  knows 100274, 100484 and 100132, v1.10, v1.31 and v1.34) is refused at
+  Start with a message naming the versions that work. Upstream started it
+  anyway: with no version there is no tile-table offset, the tile
+  properties stay empty and the Vorticon engine died on
+  TileProperties.at(0) (std::out_of_range, "__n (which is 0) >= size 0").
+  The data texts, sounds and patches are version-specific too, so v1.3 is
+  not just one offset away.
+- CEGAGraphicsGalaxy: the EGAHEAD and EGAGRAPH sizes are taken by
+  seeking to the end, not one byte past it (upstream's seekg(1, end):
+  libnix cannot seek past the end, and Keen 4 stopped with "the file
+  EGAGRAPH.CK4 is empty").
+- CGameLauncher: Esc quits the launcher wherever the focus is (upstream
+  gives Back only to the game list, and the launcher starts with Start
+  focused, so Esc did nothing); on a message, Esc closes it as Ok does.
+- Exit (GsApp::deinit): the engine a quit leaves is freed (upstream
+  released the unique_ptr, so the launcher or game was never destroyed),
+  then the menus, the effect, every tile, font, sprite and bitmap
+  (GsGraphics::freeAll), the music and SDL_mixer's samples, and the audio
+  device is closed (Audio::destroy(), with Mix_CloseAudio(), was never
+  called), all before SDL_Quit(). On AmigaOS those surfaces and samples
+  are SDL2.module's and SDL2_mixer.module's memory, which the end of the
+  program does not give back (about 4 MB was lost per run).
+- CInput, amiga/amiga_pointer.c: full screen, the mouse events' places are
+  taken from Intuition's pointer (the active window's MouseX/MouseY) and
+  turned into the renderer's logical units as SDL lays the picture out
+  (output stretched over the window, logical size scaled in and centred,
+  whole steps with integer scaling). With SDL2.module on a 1920x1200 RTG
+  screen, SDL's own numbers put the launcher's buttons away from the
+  pointer. The first such event writes the window, renderer and logical
+  sizes, and SDL's and Intuition's positions, to CGLog.html. A window on
+  the Workbench keeps SDL's numbers.
 - CVidConfig: a 640x400 window by default (upstream: 1920x1080); CSettings:
   22050 Hz mono by default.
 - CVideoDriver: amiga/amiga_screens.c (from the Seven Kingdoms port) closes
@@ -133,10 +167,27 @@ amiga/icons.
 Known limits
 ------------
 
-- Not run yet on an Amiga or in the lab: this is a build. The endian work
-  above was done by reading the code; a game could still show a format
-  that was missed (wrong graphics, levels or sounds).
+- Lab, 5 November, with Keen 4 v1.4 shareware: the launcher finds it
+  ("Episode 4, Version 1.4"), the Galaxy engine loads, the "Goodbye,
+  Galaxy!" title, the wrist-computer menu, New Game (players,
+  difficulty), the Shadowlands map with Keen walking, Esc to the menu,
+  Quit CG back to the Shell. Esc quits the launcher. Keen 4's pictures
+  and colours are right, so the big-endian graphics reading holds for
+  Galaxy. Vorticon (Keen 1-3) is still untested: the only Keen 1 data at
+  hand is v1.3, which can't be played, and the v1.31 download keeps its
+  files in the 1990 installer's own .SHR archive.
+- Started again and again from the same Shell, the third start fails
+  ("Thread creation failed: No signal bits available for thread sync",
+  then "Failed loading the Video Driver"): each run leaves signal bits
+  allocated in the Shell's own process (SDL2.module's thread
+  synchronisation; the game's thread pool frees its mutexes and
+  conditions). Started with Run, or from the Workbench, each start is a
+  process of its own and works.
+- A start that only opens the launcher and quits still leaves about
+  2.6 MB of Fast RAM in use (it was about 4 MB before the exit changes).
 - Saved games and high scores are written in the machine's own byte order:
   saves made on a PC do not load here, nor these on a PC.
 - Pixel code assumes 32-bit surfaces (as upstream makes them).
 - No downloader, no OpenGL, no Cosmo, no on-screen gamepad.
+- Keen 1 v1.3 (1990 shareware) can't be played (upstream doesn't know that
+  version either); v1.31 can.

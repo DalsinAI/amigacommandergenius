@@ -105,6 +105,10 @@ public:
     void freeTilemap();
     void freeFonts();
 
+    // Everything: tiles, fonts, sprites and bitmaps (at the program's end,
+    // before SDL stops).
+    void freeAll();
+
 	
 private:
 

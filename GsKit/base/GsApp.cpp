@@ -21,6 +21,8 @@
 
 
 #include <base/CInput.h>
+#include <base/audio/Audio.h>
+#include <base/audio/music/CMusic.h>
 #include <base/GsArguments.h>
 
 #if __EMSCRIPTEN__
@@ -132,8 +134,33 @@ bool GsApp::init(int argc, char *argv[])
     return true;
 }
 
+// The engine a quit left. Upstream released it, so it was never freed:
+// on AmigaOS its SDL surfaces stayed allocated after the end. Freed in
+// deinit(), before the drivers stop. (Kept here, not in GsApp, so that the
+// class stays as every other file was built with.)
+static std::unique_ptr<GsEngine> gpQuitEngine;
+
+static void retireEngine(std::unique_ptr<GsEngine> &engine)
+{
+    if(engine)
+        gpQuitEngine = std::move(engine);
+}
+
 void GsApp::deinit()
 {
+    // Free what holds SDL surfaces, sounds and textures while SDL is still
+    // there: the engines, the menus, the effect, the game's graphics, and
+    // close the audio device (upstream never called Audio::destroy()). On
+    // AmigaOS these live in SDL2.module's memory, which is not given back
+    // when the program ends, as libnix's malloc memory is.
+    gpQuitEngine = nullptr;
+    mpCurEngine = nullptr;
+    gMenuController.clearMenuStack();
+    gEffectController.setupEffect(nullptr);
+    gGraphics.freeAll();
+    gMusicPlayer.stop();
+    gAudio.destroy();
+
     unloadDrivers();
 }
 
@@ -152,7 +179,7 @@ void GsApp::pumpEvent(const std::shared_ptr<CEvent> &evPtr)
     }
     else if( dynamic_cast<const GMQuit*>(evPtr.get()) )
     {
-        mpCurEngine.release();
+        retireEngine(mpCurEngine);
     }
     else if( const InvokeFunctorEvent *iEv =
              dynamic_cast<const InvokeFunctorEvent*>(evPtr.get()) )
@@ -182,7 +209,7 @@ void GsApp::pollEvents()
 {
     if( gInput.getExitEvent() )
     {
-      mpCurEngine.release();
+      retireEngine(mpCurEngine);
       return;
     }
 }
