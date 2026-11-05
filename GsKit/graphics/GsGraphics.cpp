@@ -367,6 +367,18 @@ GsSprite *GsGraphics::getSprite(const int var, const std::string &name) const
 
 
 
+void GsGraphics::freeAll()
+{
+    freeBitmaps(maskedBitmap);
+    freeBitmaps(miscGsBitmap);
+    mBitmap.clear();
+    mBitmapNameToIdx.clear();
+    freeSprites();
+    mSpecialSpriteMap.clear();
+    freeFonts();
+    freeTilemap();
+}
+
 GsGraphics::~GsGraphics()
 {
 	freeBitmaps(maskedBitmap);
