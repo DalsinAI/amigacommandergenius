@@ -117,6 +117,10 @@ What was done
   TileProperties.at(0) (std::out_of_range, "__n (which is 0) >= size 0").
   The data texts, sounds and patches are version-specific too, so v1.3 is
   not just one offset away.
+- CEGAGraphicsGalaxy: the EGAHEAD and EGAGRAPH sizes are taken by
+  seeking to the end, not one byte past it (upstream's seekg(1, end):
+  libnix cannot seek past the end, and Keen 4 stopped with "the file
+  EGAGRAPH.CK4 is empty").
 - CGameLauncher: Esc quits the launcher wherever the focus is (upstream
   gives Back only to the game list, and the launcher starts with Start
   focused, so Esc did nothing); on a message, Esc closes it as Ok does.
@@ -163,20 +167,27 @@ amiga/icons.
 Known limits
 ------------
 
-- In the lab so far only the launcher has run (in a window and full
-  screen, with Keen 1 v1.3, which can't be played); the Esc, exit-memory
-  and full-screen pointer changes above are built but not yet tried
-  there. No game has been played: the endian work above was done by
-  reading the code, and a game could still show a format that was missed
-  (wrong graphics, levels or sounds).
+- Lab, 5 November, with Keen 4 v1.4 shareware: the launcher finds it
+  ("Episode 4, Version 1.4"), the Galaxy engine loads, the "Goodbye,
+  Galaxy!" title, the wrist-computer menu, New Game (players,
+  difficulty), the Shadowlands map with Keen walking, Esc to the menu,
+  Quit CG back to the Shell. Esc quits the launcher. Keen 4's pictures
+  and colours are right, so the big-endian graphics reading holds for
+  Galaxy. Vorticon (Keen 1-3) is still untested: the only Keen 1 data at
+  hand is v1.3, which can't be played, and the v1.31 download keeps its
+  files in the 1990 installer's own .SHR archive.
+- Started again and again from the same Shell, the third start fails
+  ("Thread creation failed: No signal bits available for thread sync",
+  then "Failed loading the Video Driver"): each run leaves signal bits
+  allocated in the Shell's own process (SDL2.module's thread
+  synchronisation; the game's thread pool frees its mutexes and
+  conditions). Started with Run, or from the Workbench, each start is a
+  process of its own and works.
+- A start that only opens the launcher and quits still leaves about
+  2.6 MB of Fast RAM in use (it was about 4 MB before the exit changes).
 - Saved games and high scores are written in the machine's own byte order:
   saves made on a PC do not load here, nor these on a PC.
 - Pixel code assumes 32-bit surfaces (as upstream makes them).
 - No downloader, no OpenGL, no Cosmo, no on-screen gamepad.
 - Keen 1 v1.3 (1990 shareware) can't be played (upstream doesn't know that
   version either); v1.31 can.
-- Vorticon (Keen 1-3) is untested on the Amiga: the only Keen 1 data at
-  hand is v1.3, and the v1.31 and Keen 4 shareware downloads keep their
-  files inside the 1990-92 installer's own .SHR archives, which no tool
-  here unpacks. Galaxy (Keen 4-6) is untested for the same reason (the
-  program needs the game's KEEN4E.EXE).
