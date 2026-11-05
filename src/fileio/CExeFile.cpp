@@ -18,6 +18,8 @@
 #include <base/GsLogging.h>
 
 #include <cstring>
+#include <SDL_endian.h>
+#include <base/TypeDefinitions.h>
 #include <iostream>
 #include <fstream>
 
@@ -477,6 +479,9 @@ bool CExeFile::readExeImageSize(unsigned char *p_data_start, unsigned long *imgl
 
     /* Read the header from the file if we can */
     memcpy(&head, p_data_start,sizeof(EXE_HEADER));
+    // The MZ header is little-endian
+    for(unsigned short *f = &head.mzid ; f <= &head.overlay_num ; f++)
+        *f = SDL_SwapLE16(*f);
     /* Check that the 'MZ' id is present */
     p_data_start += sizeof(EXE_HEADER);
     if(head.mzid == EXEMZ || head.mzid == EXEZM)
@@ -521,6 +526,7 @@ bool CExeFile::unpackAudioInterval( RingBuffer<IMFChunkType> &imfData,
 
         uint32_t emb_file_data_size;
         memcpy( &emb_file_data_size, &AudioCompFileData[audio_start], sizeof(uint32_t) );
+        emb_file_data_size = SDL_SwapLE32(emb_file_data_size); // little-endian file
 
         gs_byte imfDataPrim[emb_file_data_size];
         gs_byte *imfDataPtr = imfDataPrim;
@@ -552,7 +558,7 @@ bool CExeFile::unpackAudioInterval( RingBuffer<IMFChunkType> &imfData,
         }
         else
         {
-            data_size = *((word*) (void*) imfDataPtr);
+            data_size = GETWORD(imfDataPtr); // little-endian
             imfDataPtr += sizeof(word);
         }
 
@@ -587,7 +593,7 @@ bool CExeFile::readMusicHedInternal(RingBuffer<IMFChunkType> &imfData,
          audiohedptr < endptr ;
          audiohedptr++ )
     {
-        if(*audiohedptr == audiofilecompsize)
+        if(SDL_SwapLE32(*audiohedptr) == audiofilecompsize)
         {
             for( const uint32_t *startptr = starthedptr ;
                  audiohedptr > startptr ; audiohedptr-- )
@@ -595,7 +601,7 @@ bool CExeFile::readMusicHedInternal(RingBuffer<IMFChunkType> &imfData,
                 // Get the number of Audio files we have
                 number_of_audiorecs++;
                 empty = false;
-                if(*audiohedptr == 0x0)
+                if(SDL_SwapLE32(*audiohedptr) == 0x0)
                     break;
             }
             break;
@@ -611,15 +617,15 @@ bool CExeFile::readMusicHedInternal(RingBuffer<IMFChunkType> &imfData,
 
     if(getEpisode() == 4)
     {
-        memcpy(&music_start, getRawData() + 0x8CEF, sizeof(uint16_t) );
+        music_start = GETWORD(getRawData() + 0x8CEF); // little-endian
     }
     else
     {
         // Find the start of the embedded IMF files
         for( int slot = number_of_audiorecs-2 ; slot>=0 ; slot-- )
         {
-            const uint32_t audio_start = audiohedptr[slot];
-            const uint32_t audio_end = audiohedptr[slot+1];
+            const uint32_t audio_start = SDL_SwapLE32(audiohedptr[slot]);
+            const uint32_t audio_end = SDL_SwapLE32(audiohedptr[slot+1]);
 
             // Caution: There are cases where audio_start > audio_end. I don't understand why, but in the original games it happens.
             // Those slots are invalid. In mods it doesn't seem to happen!
@@ -637,7 +643,7 @@ bool CExeFile::readMusicHedInternal(RingBuffer<IMFChunkType> &imfData,
 
     for( size_t i=0 ; i<number_of_audiorecs-music_start ; i++ )
     {
-        const uint32_t record = *audiohedptr;
+        const uint32_t record = SDL_SwapLE32(*audiohedptr);
         musiched.push_back(record);
         audiohedptr++;
     }
@@ -666,6 +672,10 @@ bool CExeFile::readMusicHedFromFile(const std::string &fname, std::vector<uint32
     file.read( reinterpret_cast<char*> (&audiohed.front()), length);
 
     file.close();
+
+    // AUDIOHED is little-endian
+    for(auto &v : audiohed)
+        v = SDL_SwapLE32(v);
 
     size_t music_start = 0;
 

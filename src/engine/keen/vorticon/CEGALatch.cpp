@@ -59,8 +59,8 @@ bool CEGALatch::loadHead( char *data, short m_episode )
 		std::string name;
 		//char name[9];
         GsBitmap &Bitmap = gGraphics.getBitmapFromId(0, i);
-        memcpy(&bmpRect.w,data+16*i,2);
-		memcpy(&bmpRect.h,data+16*i+2,2);
+        bmpRect.w = GETWORD(reinterpret_cast<gs_byte*>(data+16*i)); // little-endian
+		bmpRect.h = GETWORD(reinterpret_cast<gs_byte*>(data+16*i+2)); // little-endian
 		name = static_cast<const char*>(data+16*i+8);
         bmpRect.w *= 8; // The width is always divided by eight while read, so we need to extend it back to res coords
 

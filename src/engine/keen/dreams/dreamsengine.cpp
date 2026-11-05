@@ -292,6 +292,11 @@ bool extractEmbeddedFilesIntoMemory(const BE_GameVerDetails_T &gameVerDetails)
     mapheadPtr += 400;
     memcpy(&mapFile.headersize, mapheadPtr, 100 );
 
+    // MAPHEAD is little-endian (RefKeen's own reader swaps the same way)
+    mapFile.RLEWtag = SDL_SwapLE16(mapFile.RLEWtag);
+    for(auto &off : mapFile.headeroffsets)
+        off = SDL_SwapLE32(off);
+
     mapheadPtr += 100;
 
     // The first entry seems to describe "SPEED"

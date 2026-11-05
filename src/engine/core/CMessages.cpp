@@ -137,8 +137,8 @@ bool CMessages::extractEp4Strings(std::map<std::string, std::string>& StringMap)
                 offset = 0x307C8;
                 for(int i=0 ; i<20 ; i++)
                 {
-                    memcpy( &lower, &mp_exe[offset], 2);
-                    memcpy( &higher, &mp_exe[offset+0x2], 2);
+                    lower = GETWORD(&mp_exe[offset]); // little-endian
+                    higher = GETWORD(&mp_exe[offset+0x2]);
 
                     int address = lower + (higher << 4);
 
@@ -155,7 +155,7 @@ bool CMessages::extractEp4Strings(std::map<std::string, std::string>& StringMap)
                 // Janitor text
                 auto readJanitorText = [&](const int offset, const int janitorIdx)
                 {
-                    memcpy( &lower, &mp_exe[offset], 2);
+                    lower = GETWORD(&mp_exe[offset]); // little-endian
                     int address = lower<<4;
 
                     setDecodeOffset(address);

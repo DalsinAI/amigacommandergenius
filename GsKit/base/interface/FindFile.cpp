@@ -244,7 +244,7 @@ drive_list GetDrives()
 }
 
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__amigaos__)
 
 // checks, if path is statable (that means, it's existing)
 // HINT: absolute path and there is no case fixing
@@ -488,7 +488,7 @@ bool GetExactFileName(const std::string& abs_searchname,
     return true;
 }
 
-#endif // not WIN32
+#endif // not WIN32, not AmigaOS
 
 
 searchpathlist	basesearchpaths;
@@ -508,6 +508,10 @@ void InitBaseSearchPaths()
     AddToFileList(&basesearchpaths, "${HOME}/Commander Genius");
     AddToFileList(&basesearchpaths, ".");
     AddToFileList(&basesearchpaths, "${BIN}");
+#elif defined(__amigaos__)
+    // The program's drawer has everything: global/, Games/, the settings
+    // and the saves.
+    AddToFileList(&basesearchpaths, "PROGDIR:");
 #elif defined(__SWITCH__)
     AddToFileList(&basesearchpaths, "/switch/CommanderGenius");
     AddToFileList(&basesearchpaths, "romfs:/");
@@ -817,7 +821,9 @@ bool FileListIncludesExact(const searchpathlist* l, const std::string& f) {
 
 std::string GetHomeDir()
 {
-#ifndef WIN32
+#if defined(__amigaos__)
+    return "PROGDIR:";
+#elif !defined(WIN32)
 #if defined(CAANOO) || defined(WIZ) || defined(GP2X) || defined(DINGOO) || defined(PANDORA)
     char* home = getenv("PWD");
 #elif defined(__SWITCH__)
@@ -878,7 +884,9 @@ std::string GetBinaryDir()
 }
 
 std::string GetTempDir() {
-#ifndef WIN32
+#if defined(__amigaos__)
+    return "T:";
+#elif !defined(WIN32)
     return "/tmp"; // year, it's so simple :)
 #else
     static char buf[1024] = "";
@@ -991,8 +999,10 @@ std::string GetAbsolutePath(const std::string &path) {
         return SystemNativeToUtf8(buf);
     else  // Failed
         return path;
-#elif defined(__SWITCH__)
-    return "";
+#elif defined(__SWITCH__) || defined(__amigaos__)
+    // AmigaDOS: the name stays as it is ("PROGDIR:" is the program's drawer)
+    (void) path;
+    return path;
 #else
     std::string exactpath;
     if(GetExactFileName(path, exactpath)) {

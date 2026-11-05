@@ -123,7 +123,24 @@ drive_list GetDrives();
 // This function converts relative paths to absolute paths
 std::string GetAbsolutePath (const std::string &path);
 
-#ifndef WIN32
+#ifdef __amigaos__
+
+extern "C" const char *amiga_path(const char *in, char *out, size_t size);
+
+// AmigaDOS names are case-insensitive: no search is needed, only the
+// AmigaDOS form of the name (see amiga/amiga_paths.c).
+inline bool GetExactFileName(const std::string& abs_searchname, std::string& filename) {
+	filename = abs_searchname;
+	if(abs_searchname.size() == 0)
+		return true;
+	ReplaceFileVariables(filename);
+	char buf[1024];
+	filename = amiga_path(filename.c_str(), buf, sizeof(buf));
+	struct stat finfo;
+	return stat(filename.c_str(), &finfo) == 0;
+}
+
+#elif !defined(WIN32)
 
 // mostly all system but Windows use case sensitive file systems
 // this game uses also filenames ignoring the case sensitivity

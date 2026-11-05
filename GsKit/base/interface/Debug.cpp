@@ -352,7 +352,10 @@ void OlxWriteCoreDump(const char* fileName)
 #include <cstring>
 #include <cstdio>
 
-#ifndef GCOREDUMPER
+#if defined(__amigaos__)
+// No gdb to attach on AmigaOS 3.
+static void GdbWriteCoreDump(const char* fname) { (void)fname; }
+#elif !defined(GCOREDUMPER)
 static void GdbWriteCoreDump(const char* fname) {
 	// WARNING: this is terribly slow like this
 	char gdbparam[1000];

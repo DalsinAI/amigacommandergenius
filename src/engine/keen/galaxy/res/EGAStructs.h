@@ -12,6 +12,23 @@
 #define EGASTRUCTS_H_
 
 #include <vector>
+#include <cstddef>
+#include <SDL_endian.h>
+
+// The EGAGRAPH tables are little-endian. After a memcpy() of n structs
+// that hold only 16-bit fields, this puts them in the machine's order
+// (nothing to do on a little-endian machine).
+template <typename T>
+inline void swapLE16Structs(T *p, const size_t n)
+{
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+    unsigned short *w = reinterpret_cast<unsigned short*>(p);
+    for(size_t i = 0 ; i < n*sizeof(T)/2 ; i++)
+        w[i] = SDL_SwapLE16(w[i]);
+#else
+    (void) p; (void) n;
+#endif
+}
 
 
 struct EpisodeInfoStruct

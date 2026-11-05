@@ -16,6 +16,7 @@
 #include <base/interface/FindFile.h>
 
 #include <fstream>
+#include <SDL_endian.h>
 #include <vector>
 
 std::vector<gs_byte> actionFormatData;
@@ -79,6 +80,10 @@ void ActionFormatType::setActionFormat( const size_t sprite_offset )
     gs_byte *ptr = getActionBasePtr();
 	ptr += sprite_offset;
 	memcpy( this, ptr, 15*sizeof(int16_t) );	
+	// The actions are little-endian words in the game's data segment
+	int16_t *w = &spriteLeft;
+	for(int i=0 ; i<15 ; i++)
+		w[i] = int16_t(SDL_SwapLE16(uint16_t(w[i])));
 }
 
 void ActionFormatType::setNextActionFormat()
@@ -90,7 +95,12 @@ bool ActionFormatType::getActionFormat( const size_t sprite_offset )
 {
     gs_byte *ptr = getActionBasePtr();
 	ptr += sprite_offset;
-	return (memcmp( this, ptr, 15*sizeof(int16_t) ) == 0);
+	// as setActionFormat() has it: in the machine's byte order
+	int16_t w[15];
+	memcpy( w, ptr, sizeof(w) );
+	for(int i=0 ; i<15 ; i++)
+		w[i] = int16_t(SDL_SwapLE16(uint16_t(w[i])));
+	return (memcmp( this, w, sizeof(w) ) == 0);
 }
 
 bool dumpActionFormatToFile(const std::string &fileName,

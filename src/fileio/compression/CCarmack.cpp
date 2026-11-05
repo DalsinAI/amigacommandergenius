@@ -9,6 +9,7 @@
 #include <base/GsLogging.h>
 #include <base/interface/StringUtils.h>
 #include <base/TypeDefinitions.h>
+#include <SDL_endian.h>
 
 #define WORDSIZE    2
 
@@ -44,7 +45,7 @@ static void CarmackExpand(void *src, void *dest, int expLength)
                 uint8_t *srcptr_8 = (uint8_t *)(srcptr) + 1;
                 memcpy(&srcptr, &srcptr_8, sizeof(uint8_t *));
 
-                *(dstptr++) = ch;
+                *(dstptr++) = SDL_SwapLE16(ch); // the output stays little-endian, as the input
                 expLength--;
             }
             else
@@ -71,7 +72,7 @@ static void CarmackExpand(void *src, void *dest, int expLength)
                 uint8_t *srcptr_8 = (uint8_t *)(srcptr) + 1;
                 memcpy(&srcptr, &srcptr_8, sizeof(uint8_t *));
 
-                *(dstptr++) = ch;
+                *(dstptr++) = SDL_SwapLE16(ch); // the output stays little-endian, as the input
                 expLength--;
             }
             else
@@ -86,7 +87,7 @@ static void CarmackExpand(void *src, void *dest, int expLength)
         }
         else
         {
-            *(dstptr++) = ch;
+            *(dstptr++) = SDL_SwapLE16(ch); // the output stays little-endian, as the input
             --expLength;
         }
     }

@@ -65,6 +65,13 @@ int CommanderGenius_Run(int argc, char *argv[])
     switch_init();
 #endif
 
+#ifdef __amigaos__
+    // The loaders run in SDL threads (base/interface/ThreadPool.cpp), and
+    // they nest as deeply as the main program: give them a big stack too
+    // (amiga/stack.c sets the main one).
+    SDL_SetHint(SDL_HINT_THREAD_STACK_SIZE, "524288");
+#endif
+
     const std::string appName = "Commander Genius";
     gApp.setName(appName);
 

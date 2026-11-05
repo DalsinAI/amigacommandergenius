@@ -105,19 +105,14 @@ GsVec2D<int> CPlayerWM::fetchFootDestCoord()
 {
     GsVec2D<int> location1;
     GsVec2D<int> location2;
-    int coordData;
 
     const gs_byte *dataPtr = gKeenFiles.exeFile.getRawData();
 
-    memcpy(&coordData, dataPtr+0xDE43, sizeof(int));
-    location1.x = coordData & 0xFF;
-    memcpy(&coordData, dataPtr+0xDE58, sizeof(int));
-    location1.y = coordData & 0xFF;
+    location1.x = dataPtr[0xDE43]; // the low byte of a little-endian int
+    location1.y = dataPtr[0xDE58]; // the low byte of a little-endian int
 
-    memcpy(&coordData, dataPtr+0xDE78, sizeof(int));
-    location2.x = coordData & 0xFF;
-    memcpy(&coordData, dataPtr+0xDE8C, sizeof(int));
-    location2.y = coordData & 0xFF;
+    location2.x = dataPtr[0xDE78]; // the low byte of a little-endian int
+    location2.y = dataPtr[0xDE8C]; // the low byte of a little-endian int
 
 
     // Check for the first location

@@ -68,7 +68,7 @@ mCanFinishGame(false)
 
     gs_byte *ptr = gKeenFiles.exeFile.getRawData();
     ptr += 0x10D35;
-    memcpy(&mHealth, ptr, 1 );
+    mHealth = *ptr; // one byte (a memcpy into an int is wrong on a big-endian machine)
     
     ptr = gKeenFiles.exeFile.getRawData();
     ptr += 0x1256C;
