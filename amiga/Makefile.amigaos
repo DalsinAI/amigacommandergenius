@@ -122,8 +122,6 @@ package: $(OUT)/$(PROG) $(ICONS) AMIGA_PORT.md COPYRIGHT README.md amiga/Games-R
 	cp amiga/icons/CommanderGenius.info amiga/icons/ReadMe.info \
 	   amiga/icons/README-CG.md.info amiga/icons/COPYING.txt.info \
 	   amiga/icons/changelog.txt.info $(OUT)/
-	cp amiga/icons/Data.info $(OUT)/global.info
-	cp amiga/icons/Data.info $(OUT)/global/gfx.info
 	cp amiga/icons/Games.info $(OUT)/Games.info
 	cp amiga/icons/ReadMe.info $(OUT)/Games/ReadMe.info
 	cp amiga/icons/CommanderGenius-drawer.info $(BUILD)/CommanderGenius.info
